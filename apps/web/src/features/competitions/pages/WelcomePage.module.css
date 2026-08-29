@@ -1,0 +1,11 @@
+.column {
+  width: 100%;
+  max-width: var(--mds-modal-w);
+}
+
+/* Square artwork sized as a share of the column, so the podium sits on the
+   same vertical axis as the wordmark under it and reads about as wide. */
+.mark {
+  width: 32%;
+  aspect-ratio: 1;
+}

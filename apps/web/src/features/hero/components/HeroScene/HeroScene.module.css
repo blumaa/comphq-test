@@ -1,0 +1,173 @@
+/* Centring is written with `translate` rather than `transform` on purpose:
+   gsap animates x and y, which it writes into `transform`, so a centre held
+   in the same property would be wiped on the first parallax frame. v1 got
+   this for free — Tailwind 4 compiles -translate-x-1/2 to the `translate`
+   property — and it has to be deliberate here. */
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--hero-void);
+}
+
+/* The photograph again, out of focus and pushed past the edges, so the scene
+   sits in light rather than on black at any window shape. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+}
+
+.backdropImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(var(--hero-backdrop-dim)) blur(var(--hero-backdrop-blur));
+  scale: var(--hero-backdrop-scale);
+}
+
+/* The scene is the photograph's own frame, full height and centred. */
+.scene {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100svh;
+  aspect-ratio: var(--hero-aspect);
+  translate: -50% 0;
+}
+
+/* Overhung by 5% so the parallax has somewhere to move to without showing an
+   edge. */
+.parallax {
+  position: absolute;
+  inset: -5%;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.glow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 60%;
+  height: 25%;
+  translate: -50% 0;
+  background: var(--hero-glow);
+  filter: blur(var(--hero-glow-blur));
+}
+
+/* Two dust layers, one either side of the figure. Both are filled by gsap,
+   which also writes each element's size, colour and position inline. */
+.dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A mote of dust catching the light, and a spark of it. */
+.mote {
+  position: absolute;
+  border-radius: var(--mds-radius-pill);
+  filter: blur(var(--hero-mote-blur));
+}
+
+.speck {
+  position: absolute;
+  border-radius: var(--mds-radius-pill);
+}
+
+.figure {
+  position: absolute;
+  inset: 0;
+}
+
+/* Contained and bottom-aligned: the cutout stands on the floor of the frame
+   whatever the window does to the frame's height. v1 also asks for a 2%
+   inset off the bottom, which never applied — top, height and bottom
+   together are over-constrained, and it is bottom that a browser drops. */
+.figureImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom;
+}
+
+.text {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--hero-line-gap);
+  translate: 0 -50%;
+  padding-inline: var(--mds-space-4);
+  font-family: var(--comphq-font-hero);
+  text-align: center;
+  text-shadow: var(--hero-text-shadow);
+  pointer-events: none;
+}
+
+@media (min-width: 600px) {
+  .text {
+    gap: var(--mds-space-1);
+  }
+}
+
+.title {
+  color: var(--hero-ink);
+  font-size: var(--hero-title-size);
+  font-weight: var(--hero-title-weight);
+  letter-spacing: var(--hero-title-tracking);
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: var(--hero-ink-secondary);
+  font-size: var(--hero-subtitle-size);
+  font-weight: var(--mds-weight-bold);
+  letter-spacing: var(--hero-subtitle-tracking);
+  text-transform: uppercase;
+}
+
+.date {
+  color: var(--hero-ink-tertiary);
+  font-size: var(--hero-date-size);
+  font-weight: var(--mds-weight-regular);
+  font-style: italic;
+  letter-spacing: var(--hero-date-tracking);
+}
+
+/* The line a letter's fragments are positioned against. */
+.line {
+  position: relative;
+}
+
+.letter {
+  display: inline-block;
+}
+
+.space {
+  width: var(--hero-space-width);
+}
+
+/* Fades out over the scene as the entrance starts, and stays over it if gsap
+   never runs. */
+.dim {
+  position: absolute;
+  inset: 0;
+  background: var(--hero-void);
+  pointer-events: none;
+}

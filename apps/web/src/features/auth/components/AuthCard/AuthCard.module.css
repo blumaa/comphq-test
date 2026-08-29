@@ -1,0 +1,14 @@
+/* --mds-modal-w is the system's centred-dialog width, which is what this is. */
+.card {
+  width: 100%;
+  max-width: var(--mds-modal-w);
+}
+
+/* The mark is square artwork that fills whatever box it is given, so the box
+   is a share of the card rather than a size of its own — the proportion v1
+   drew, without repeating v1's 240px inside a card the system now measures. */
+.mark {
+  align-self: center;
+  width: 75%;
+  aspect-ratio: 1;
+}

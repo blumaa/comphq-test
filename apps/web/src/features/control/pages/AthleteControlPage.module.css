@@ -1,0 +1,86 @@
+.heats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A heat stacks on a phone — the number and its state first, then the two
+   boxes side by side, then the start — and lines the same parts up in columns
+   from --mds-bp-md, where there is room to read them across. */
+.heat {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "head head"
+    "corral walkout"
+    "start start"
+    "lanes lanes";
+  gap: var(--mds-gap-tight);
+  padding-block: var(--mds-space-3);
+}
+
+.heat + .heat {
+  border-block-start: var(--mds-border-width) solid var(--mds-border-subtle);
+}
+
+@media (min-width: 600px) {
+  .heat {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "head corral walkout start"
+      "lanes lanes lanes lanes";
+    align-items: center;
+    column-gap: var(--mds-gap);
+  }
+}
+
+/* Called and walked out: the heat is behind the desk now, and what is left of
+   it on the screen is a record rather than a job. */
+.done {
+  color: var(--mds-text-muted);
+}
+
+.head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mds-gap-tight);
+}
+
+/* A time, the word that says which time it is, and the box that retires it,
+   kept together: the box belongs to the time beside it. */
+.tick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mds-gap-tight);
+}
+
+.corral {
+  grid-area: corral;
+}
+
+.walkout {
+  grid-area: walkout;
+}
+
+.start {
+  grid-area: start;
+}
+
+/* Ticked means done, and a done time is still worth reading — the strike is
+   what says it has been dealt with without taking it off the screen. */
+.struck {
+  text-decoration: line-through;
+}
+
+.lanes {
+  grid-area: lanes;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mds-gap-hairline);
+}

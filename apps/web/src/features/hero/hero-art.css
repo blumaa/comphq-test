@@ -1,0 +1,63 @@
+/* The hero's art values — the one stylesheet in the app allowed to hold
+ * literals, and `pnpm check:tokens` names it explicitly.
+ *
+ * The reason is that these are not design decisions the system can hold. The
+ * scene is composed against a photograph: #fff5e6 is the warm white the
+ * figure is lit with, rgba(210,175,110,…) is the dust in the same light, and
+ * the type is sized in vw so the poster holds its proportions rather than the
+ * app's reading scale. None of it has a rung to sit on, and pushing it into
+ * MDS would put a marketing photograph's palette into every other app.
+ *
+ * The exemption is bounded: this file may name values and may not apply them.
+ * Every stylesheet that draws with them is under the usual rule, so a raw
+ * value cannot spread out from here.
+ */
+:root {
+  /* The letterbox either side of the scene, and the dim it fades up from. */
+  --hero-void: #000000;
+
+  /* Type, lit by the photograph. The two lower lines are the same white
+     stepped back, which is what puts the title in front of them. */
+  --hero-ink: #fff5e6;
+  --hero-ink-secondary: rgba(255, 245, 230, 0.9);
+  --hero-ink-tertiary: rgba(255, 245, 230, 0.85);
+  --hero-text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.7);
+
+  /* The firelight at the figure's feet. */
+  --hero-glow: radial-gradient(
+    ellipse at center bottom,
+    rgba(220, 180, 100, 0.4) 0%,
+    rgba(200, 160, 80, 0.15) 40%,
+    transparent 70%
+  );
+  --hero-glow-blur: 20px;
+
+  /* Dust motes are soft enough to read as light rather than as circles. */
+  --hero-mote-blur: 12px;
+
+  /* The backdrop is the same photograph, thrown out of focus behind the
+     scene so the frame edges do not read as edges. */
+  --hero-backdrop-blur: 16px;
+  --hero-backdrop-dim: 0.3;
+  --hero-backdrop-scale: 1.1;
+
+  /* The poster's own scale: it grows with the viewport, between a size that
+     stays readable on a phone and one that stops growing on a desktop. */
+  --hero-title-size: clamp(1.875rem, 4.5vw, 3rem);
+  --hero-title-weight: 900;
+  --hero-title-tracking: 0.15em;
+  --hero-subtitle-size: clamp(1.25rem, 3.5vw, 2.25rem);
+  --hero-subtitle-tracking: 0.2em;
+  --hero-date-size: clamp(1rem, 2.5vw, 1.5rem);
+  --hero-date-tracking: 0.1em;
+
+  /* Three lines set as one block, so the gap between them is tighter than
+     anything the spacing scale offers. */
+  --hero-line-gap: 2px;
+
+  /* A space is a letter here too: it animates, so it needs a width. */
+  --hero-space-width: 0.3em;
+
+  /* The frame the photograph was shot in, held whatever the window does. */
+  --hero-aspect: 1036 / 1264;
+}

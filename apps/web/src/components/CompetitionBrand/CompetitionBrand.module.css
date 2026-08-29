@@ -1,0 +1,23 @@
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--mds-gap-tight);
+}
+
+/* Both marks are the same height. An uploaded logo and the fallback leave the
+   bar the same size, so it does not change height the moment a competition
+   uploads one — which on a phone moves the whole page under the reader's
+   thumb. The fallback is square artwork; a logo keeps its own proportion. */
+.mark {
+  width: var(--mds-space-9);
+  height: var(--mds-space-9);
+}
+
+.logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: var(--mds-space-9);
+  max-width: var(--mds-sidebar-w);
+  object-fit: contain;
+}

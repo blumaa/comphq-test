@@ -1,0 +1,22 @@
+/* Sized by the box it is put in, the way an icon is. */
+.mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--mds-text-primary);
+}
+
+.bar {
+  fill: currentcolor;
+}
+
+/* The floor the palette is named after. Present at 200px, gone at 40px, which
+   is what an opacity that low is for. */
+.floor {
+  fill: currentcolor;
+  opacity: 0.35;
+}
+
+.lead {
+  fill: var(--mds-highlight);
+}

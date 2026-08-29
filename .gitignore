@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+coverage/
+playwright-report/
+test-results/
+supabase/.temp/
+
+# Database dumps — real athlete and account data, never commit.
+.backups/
+
+# Local tool state
+.DS_Store
+.playwright-mcp/
+.claude/

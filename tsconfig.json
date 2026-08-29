@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/*": [
+        "supabase/functions/_shared/*"
+      ],
+      "@/test/*": [
+        "supabase/functions/_shared/test/*"
+      ],
+      "@/db/*": [
+        "supabase/functions/_shared/db/*"
+      ],
+      "@shared/*": [
+        "supabase/functions/_shared/*"
+      ]
+    },
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "supabase/functions/**/*.ts",
+    "tools/**/*.ts",
+    "e2e/**/*.ts",
+    "playwright.config.ts"
+  ],
+  "exclude": [
+    "supabase/functions/*/index.ts",
+    "supabase/functions/_dev/serve.ts"
+  ]
+}

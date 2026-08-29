@@ -1,0 +1,30 @@
+/* One rung above the display role. On a landing screen the wordmark is the
+   identity rather than a page title, so it is not on the same ladder as the
+   headings around it. */
+.lockup {
+  display: inline-block;
+  font-family: var(--mds-font-display);
+  font-size: var(--mds-text-4xl);
+  font-weight: var(--mds-weight-bold);
+  line-height: var(--mds-leading-tight);
+  letter-spacing: var(--mds-tracking-tight);
+}
+
+/* In a bar it is a name among links, so it takes the label role the links
+   themselves are set in — bold, because it is the one word that is not one. */
+.inline {
+  display: inline-block;
+  font: var(--mds-type-label);
+  font-weight: var(--mds-weight-bold);
+  letter-spacing: var(--mds-tracking-tight);
+}
+
+.comp {
+  color: var(--mds-text-primary);
+}
+
+/* The same highlight the mark's lead bar takes, so the two halves of the
+   identity are one colour rather than two golds that nearly match. */
+.hq {
+  color: var(--mds-highlight);
+}

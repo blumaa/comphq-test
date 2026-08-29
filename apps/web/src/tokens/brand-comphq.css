@@ -1,0 +1,161 @@
+/* CompHQ brand — colour and font, and nothing else.
+ *
+ * Copied from @mond-design-system/tokens/brand-template.css and re-pointed.
+ * The template's geometry block is deliberately absent: shape and size are the
+ * design system's, and a brand that moves a radius rung moves components that
+ * have nothing to do with each other. Anything geometric that looks wrong is
+ * fixed in MDS, not here.
+ *
+ * The palette is "Floor", and it is not v1's. v1 painted lane numbers,
+ * headings, buttons and links in one orange, so colour marked everything and
+ * therefore marked nothing. Floor is neutral-dominant with two signals held
+ * far apart in hue, and each one means a single thing:
+ *
+ *   cyan is interactive   links, buttons, focus — anything the hand acts on
+ *   amber is live-now     the running heat, the current lane, the countdown
+ *   neutral is data       names, lanes, times and standings are not coloured
+ *   status is outcome     danger, warning, success, and nothing else
+ *
+ * Cyan and amber are far enough apart in hue to survive deuteranopia and a
+ * projector across a gym, which are the two viewing conditions this app has
+ * that a normal web app does not.
+ *
+ * Dark is the only theme, so the values live in :root and there is no
+ * [data-theme="dark"] block. check:tokens slices this file at that selector;
+ * with no dark block both of its theme tables resolve to these values and
+ * every contrast pair is proved twice. index.html carries no data-theme
+ * attribute for the same reason — MDS component CSS never keys on it, only
+ * the tokens package does, and there is no second theme to key.
+ *
+ * Load order: tokens/styles.css, then @mond-design-system/react/styles.css,
+ * then this file. It re-points custom properties only, so it wins by being
+ * last.
+ */
+/* Cinzel, the display face of the /hero poster and of nothing else, so it is
+ * declared here but re-points none of the three --mds-font-* roles: the app's
+ * own type is unchanged by it. v1 pulled it through next/font/google, which
+ * self-hosts at build time; these are the same two subset files, taken from
+ * Google Fonts (Cinzel v26, SIL Open Font License 1.1) and served from
+ * public/fonts. One variable file covers the 400, 700 and 900 v1 asked for.
+ */
+@font-face {
+  font-family: Cinzel;
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/cinzel-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Cinzel;
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/cinzel-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* fonts — CompHQ has no licensed typeface. The one decision made here is
+     that display is not a serif: nothing in a competition scoreboard wants
+     Georgia, and the numbers have to hold at forty feet. */
+  --mds-font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mds-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mds-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* The poster's face, named as a role so the scene never spells it out.
+     Serif is the fallback: Cinzel is one, and Times is closer to it than the
+     UI stack is. */
+  --comphq-font-hero: Cinzel, "Times New Roman", serif;
+
+  /* text — three rungs, all neutral. Nothing in the data is coloured. */
+  --mds-text-primary: #eef2f7;
+  --mds-text-secondary: #c7d2df;
+  --mds-text-muted: #a9b4c2;
+  --mds-text-inverse: #0a0d12;
+  --mds-text-accent: var(--mds-accent);
+  --mds-text-on-media: #ffffff;
+
+  /* surfaces — four steps of near-black. The page is the darkest thing a
+     spectator sees in a dim gym; card and raised step up from it, not down. */
+  --mds-surface-page: #0a0d12;
+  --mds-surface-card: #131820;
+  --mds-surface-raised: #1d242f;
+  --mds-surface-sunken: #05070a;
+  --mds-surface-inverse: #eef2f7;
+  --mds-surface-media: #05070a;
+  --mds-surface-selected: #0e2c3a;
+
+  /* borders + controls */
+  --mds-border-subtle: #1d242f;
+  --mds-border-strong: #2b3441;
+  --mds-control-border: #7a8899;
+  --mds-button-border: var(--mds-control-border);
+  --mds-button-secondary-fg: var(--mds-text-primary);
+  --mds-control-knob: #ffffff;
+
+  /* action — the default interactive fill is the accent, because on a dark
+     product a neutral fill and a raised surface are the same thing. */
+  --mds-action-bg: #4cc9f0;
+  --mds-action-fg: #06131a;
+  --mds-action-bg-hover: #7bd8f5;
+  --mds-action-bg-active: #35b4dc;
+  --mds-action-disabled-bg: #1d242f;
+  --mds-action-disabled-fg: #7a8899;
+
+  /* accent — cyan, and it means interactive */
+  --mds-accent: #4cc9f0;
+  --mds-accent-contrast: #06131a;
+  --mds-accent-hover: #7bd8f5;
+  --mds-accent-soft: #0e2c3a;
+
+  /* highlight — amber, and it means live-now. Two-accent brand, so all four
+     rungs are re-pointed rather than aliased to accent. */
+  --mds-highlight: #ffb020;
+  --mds-highlight-contrast: #1a1200;
+  --mds-highlight-hover: #ffc04d;
+  --mds-highlight-soft: #3a2600;
+
+  /* avatar identity tints — five dark tints, initials draw in text-primary */
+  --mds-avatar-tone-1: #0e2c3a;
+  --mds-avatar-tone-2: #3a2600;
+  --mds-avatar-tone-3: #0b2e1a;
+  --mds-avatar-tone-4: #331a3a;
+  --mds-avatar-tone-5: #3a1213;
+
+  /* status — outcome only, never decoration */
+  --mds-status-danger: #ff6b6b;
+  --mds-status-danger-contrast: #2a0808;
+  --mds-status-danger-soft: #3a1213;
+  --mds-status-warning: #ffd24a;
+  --mds-status-warning-contrast: #241a00;
+  --mds-status-warning-soft: #332400;
+  --mds-status-success: #4ade80;
+  --mds-status-success-contrast: #052e14;
+  --mds-status-success-soft: #0b2e1a;
+
+  /* focus — the accent, so the ring says the same thing the fill does */
+  --mds-focus-ring-color: #4cc9f0;
+
+  /* overlays. Scrims sit on the page, which is already near-black, so they
+     lean heavier than a light theme's would to read as a layer at all. */
+  --mds-scrim: rgb(0 0 0 / 0.6);
+  --mds-scrim-strong: rgb(0 0 0 / 0.75);
+  --mds-overlay: rgb(0 0 0 / 0.55);
+
+  /* on-media sits on a photograph, not on a surface, so these do not move
+     with the theme. The focus ring here is amber: cyan disappears against
+     water and sky, which is most of what a competition photo contains. */
+  --mds-on-media-dim: rgb(255 255 255 / 0.55);
+  --mds-on-media-border: rgb(255 255 255 / 0.55);
+  --mds-on-media-focus-ring: #ffb020;
+  --mds-on-media-surface-hover: rgb(255 255 255 / 0.16);
+  --mds-on-media-surface-active: rgb(255 255 255 / 0.28);
+
+  /* shadow tint — black, because nothing on this palette is darker than the
+     page and a tinted shadow would read as a colour cast */
+  --mds-shadow-rgb: 0 0 0;
+}

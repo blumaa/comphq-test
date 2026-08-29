@@ -1,0 +1,31 @@
+/* Two panes where the design system keeps room for a second rail — the app's
+   own rail already has the first. Below that step they stack, index first. */
+
+.panes {
+  display: grid;
+  gap: var(--mds-stack-section);
+}
+
+.heats {
+  min-width: 0;
+}
+
+@media (min-width: 1280px) {
+  .panes {
+    grid-template-columns: minmax(0, var(--mds-sidebar-w)) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .rail {
+    position: sticky;
+    top: var(--mds-pad-card);
+  }
+}
+
+.description {
+  white-space: pre-wrap;
+}
+
+.tally {
+  margin-left: var(--mds-space-1);
+}
