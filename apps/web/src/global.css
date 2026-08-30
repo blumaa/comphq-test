@@ -12,3 +12,15 @@ body,
 #root {
   height: 100%;
 }
+
+/* MDS centers its toast viewport on every width. On a phone that is the whole
+ * width anyway; on a desktop this app wants them out of the content's way in
+ * the corner. 1024px is --mds-bp-lg — the same line every layout here changes
+ * shape at — written literally because a var() cannot appear in @media. */
+@media (min-width: 1024px) {
+  .mds-Toast__viewport {
+    left: auto;
+    right: var(--mds-toast-inset);
+    transform: none;
+  }
+}
