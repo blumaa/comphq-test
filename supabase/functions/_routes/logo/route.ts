@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { setting } from '@/db/schema'
+import { siteSetting } from '@/db/schema'
 import { supabase } from '@/lib/supabase'
 import { authErrorResponse, requireSession } from '@/lib/auth-competition'
 
@@ -17,15 +17,14 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-// Logo is a site-wide setting stored with competitionId = 0 since it isn't
-// scoped per competition. The Setting table PK is (competitionId, key).
-const LOGO_COMPETITION_ID = 0
+// The logo is site-wide, so it lives in SiteSetting. v1 kept it in Setting
+// under competitionId 0; this schema's FK to Competition refuses that row.
 
 async function readLogoUrl(): Promise<string | null> {
   const rows = await db
-    .select({ value: setting.value })
-    .from(setting)
-    .where(eq(setting.key, LOGO_KEY))
+    .select({ value: siteSetting.value })
+    .from(siteSetting)
+    .where(eq(siteSetting.key, LOGO_KEY))
     .limit(1)
   return rows[0]?.value ?? null
 }
@@ -61,10 +60,10 @@ export async function POST(req: Request) {
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename)
   await db
-    .insert(setting)
-    .values({ competitionId: LOGO_COMPETITION_ID, key: LOGO_KEY, value: data.publicUrl })
+    .insert(siteSetting)
+    .values({ key: LOGO_KEY, value: data.publicUrl })
     .onConflictDoUpdate({
-      target: [setting.competitionId, setting.key],
+      target: siteSetting.key,
       set: { value: data.publicUrl },
     })
 
@@ -78,7 +77,7 @@ export async function DELETE() {
   if (value) {
     const filename = value.split('/').pop()!
     await supabase.storage.from(BUCKET).remove([filename])
-    await db.delete(setting).where(eq(setting.key, LOGO_KEY))
+    await db.delete(siteSetting).where(eq(siteSetting.key, LOGO_KEY))
   }
   return Response.json({ url: null })
 }

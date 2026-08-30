@@ -149,6 +149,13 @@ export const setting = pgTable('Setting', {
   primaryKey({ columns: [t.competitionId, t.key] }),
 ])
 
+// Install-global values — the logo. Not in Setting: that PK carries a
+// competitionId whose FK a site-wide sentinel row cannot satisfy.
+export const siteSetting = pgTable('SiteSetting', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})
+
 export const volunteerRole = pgTable('VolunteerRole', {
   id: serial('id').primaryKey(),
   competitionId: integer('competitionId').notNull().references(() => competition.id, { onDelete: 'cascade' }),

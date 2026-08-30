@@ -53,7 +53,7 @@ describe('POST /api/logo', () => {
     expect(res.status).toBe(413)
   })
 
-  it('uploads file, stores url in Setting, returns url', async () => {
+  it('uploads file, stores url in SiteSetting, returns url', async () => {
     dmock.queueResult(undefined) // upsert returns nothing
     const form = new FormData()
     form.append('logo', new File(['data'], 'logo.png', { type: 'image/png' }))
