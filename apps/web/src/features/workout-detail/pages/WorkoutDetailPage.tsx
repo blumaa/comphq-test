@@ -253,6 +253,7 @@ export function WorkoutDetailPage() {
   const generators = (
     <>
       <Button
+        size="sm"
         variant="secondary"
         onClick={() => detail.generateAssignments(false)}
         disabled={detail.loading || locked}
@@ -260,13 +261,14 @@ export function WorkoutDetailPage() {
         Generate (Random / Division Order)
       </Button>
       <Button
+        size="sm"
         onClick={() => detail.generateAssignments(true)}
         disabled={detail.loading || locked}
       >
         Generate (By Cumulative Points)
       </Button>
       {locked && (
-        <Button variant="secondary" onClick={() => setPrompt('unlock')}>Unlock to Regenerate</Button>
+        <Button size="sm" variant="secondary" onClick={() => setPrompt('unlock')}>Unlock to Regenerate</Button>
       )}
     </>
   )
@@ -332,54 +334,67 @@ export function WorkoutDetailPage() {
             <Stack gap="section">
               <HeatRail items={heatItems} />
 
+              {/* The tally lives beside the eyebrow, not in the button: the
+                  label is already the widest thing in the rail, and a suffix
+                  that grows with the athlete count is what used to clip it. */}
               <Stack gap="tight">
-                <Text variant="eyebrow" tone="muted">Scores</Text>
-                <Button
-                  onClick={calculate}
-                  disabled={detail.loading || !someScored}
-                  title={!someScored
-                    ? 'Enter at least one score first'
-                    : scoredCount < totalAthletes
-                      ? `${totalAthletes - scoredCount} athlete(s) without scores will be unranked`
-                      : ''}
-                >
-                  Calculate Rankings &amp; Complete
+                <Inline gap="tight" align="center">
+                  <Text variant="eyebrow" tone="muted">Scores</Text>
                   {scoredCount < totalAthletes && someScored && (
-                    <Text as="span" variant="meta" className={styles.tally}>({scoredCount}/{totalAthletes})</Text>
+                    <Text variant="meta" tone="muted">{scoredCount}/{totalAthletes} scored</Text>
                   )}
-                </Button>
-                <Button variant="secondary" onClick={saveAllScores} disabled={detail.loading}>
-                  Save All Scores
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => setPrompt('clearScores')}
-                  disabled={detail.loading || workout.scores.length === 0}
-                >
-                  Clear All Scores
-                </Button>
+                </Inline>
+                <div className={styles.controls}>
+                  <Button
+                    size="sm"
+                    onClick={calculate}
+                    disabled={detail.loading || !someScored}
+                    title={!someScored
+                      ? 'Enter at least one score first'
+                      : scoredCount < totalAthletes
+                        ? `${totalAthletes - scoredCount} athlete(s) without scores will be unranked`
+                        : ''}
+                  >
+                    Calculate Rankings &amp; Complete
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={saveAllScores} disabled={detail.loading}>
+                    Save All Scores
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => setPrompt('clearScores')}
+                    disabled={detail.loading || workout.scores.length === 0}
+                  >
+                    Clear All Scores
+                  </Button>
+                </div>
               </Stack>
 
               <Stack gap="tight">
                 <Text variant="eyebrow" tone="muted">Judges</Text>
-                <Button
-                  size="sm"
-                  onClick={generateJudges}
-                  disabled={judges.judges.length === 0}
-                  title={judges.judges.length === 0 ? 'Add volunteers with a "Judge" role first' : undefined}
-                >
-                  Auto-Assign Judges
-                </Button>
-                {judges.assignments.length > 0 && (
-                  <Button variant="danger" size="sm" onClick={() => setPrompt('clearJudges')}>
-                    Clear Judges
+                <div className={styles.controls}>
+                  <Button
+                    size="sm"
+                    onClick={generateJudges}
+                    disabled={judges.judges.length === 0}
+                    title={judges.judges.length === 0 ? 'Add volunteers with a "Judge" role first' : undefined}
+                  >
+                    Auto-Assign Judges
                   </Button>
-                )}
+                  {judges.assignments.length > 0 && (
+                    <Button variant="danger" size="sm" onClick={() => setPrompt('clearJudges')}>
+                      Clear Judges
+                    </Button>
+                  )}
+                </div>
               </Stack>
 
               <Stack gap="tight">
                 <Text variant="eyebrow" tone="muted">Heat assignments</Text>
-                {generators}
+                <div className={styles.controls}>
+                  {generators}
+                </div>
                 <Text variant="meta" tone="muted">
                   Best athletes are placed in the last heat. Existing assignments are replaced.
                 </Text>

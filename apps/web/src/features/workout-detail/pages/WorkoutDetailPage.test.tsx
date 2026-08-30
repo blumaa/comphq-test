@@ -360,9 +360,12 @@ describe('the heats themselves', () => {
     await waitFor(() => expect(apiDel).toHaveBeenCalledWith('/api/workouts/42/scores?slug=rugged-rumble'))
   })
 
-  it('counts the athletes still unscored on the calculate button', async () => {
+  // The count sits beside the button, not in it: the label is already the
+  // widest thing in a 240px rail, and a growing suffix is what clipped it.
+  it('counts the athletes still unscored beside the calculate button', async () => {
     await open()
-    expect(screen.getByRole('button', { name: /Calculate Rankings & Complete/ })).toHaveTextContent('(1/3)')
+    expect(screen.getByText('1/3 scored')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Calculate Rankings & Complete' })).not.toHaveTextContent('1/3')
   })
 
   it('will not calculate before anything is scored', async () => {
