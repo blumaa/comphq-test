@@ -51,6 +51,25 @@ describe('useUpdateSettings', () => {
     expect(apiPatch).toHaveBeenCalledWith('/api/settings', { slug: 'summer', tiebreakWorkoutId: null })
   })
 
+  // A toggle answers the hand: the cached value flips before the server does.
+  it('flips the cached value before the server answers', async () => {
+    client.setQueryData(queryKeys.settings('summer'), { showBib: true })
+    let land!: (v: unknown) => void
+    apiPatch.mockReturnValue(new Promise((r) => { land = r }))
+    const { result } = renderHook(() => useUpdateSettings('summer'), { wrapper })
+    await act(async () => { result.current.mutate({ showBib: false }) })
+    expect(client.getQueryData(queryKeys.settings('summer'))).toEqual({ showBib: false })
+    await act(async () => { land({}) })
+  })
+
+  it('puts the old value back when the write is refused', async () => {
+    client.setQueryData(queryKeys.settings('summer'), { showBib: true })
+    apiPatch.mockRejectedValue(new Error('no'))
+    const { result } = renderHook(() => useUpdateSettings('summer'), { wrapper })
+    await act(() => result.current.mutateAsync({ showBib: false }).catch(() => {}))
+    expect(client.getQueryData(queryKeys.settings('summer'))).toEqual({ showBib: true })
+  })
+
   it('re-reads the settings the judge gate and the leaderboard share', async () => {
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useUpdateSettings('summer'), { wrapper })

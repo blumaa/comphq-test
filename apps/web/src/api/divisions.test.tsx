@@ -122,6 +122,30 @@ describe('writing a division', () => {
       await act(() => result.current.mutateAsync({ rows: ROWS, from: 1, to: 1 }))
       expect(apiPut).not.toHaveBeenCalled()
     })
+
+    // The pick answers the hand: the cached list moves before the writes land.
+    it('reorders the cached list before the writes land', async () => {
+      client.setQueryData(queryKeys.divisions('summer'), ROWS)
+      let land!: (v: unknown) => void
+      apiPut.mockReturnValue(new Promise((r) => { land = r }))
+      const { result } = renderHook(() => useReorderDivisions('summer'), { wrapper })
+      await act(async () => { result.current.mutate({ rows: ROWS, from: 0, to: 2 }) })
+      expect(client.getQueryData(queryKeys.divisions('summer'))).toEqual([
+        { id: 2, name: 'Scaled', order: 1 },
+        { id: 3, name: 'Masters', order: 2 },
+        { id: 1, name: 'RX', order: 3 },
+        { id: 4, name: 'Teens', order: 4 },
+      ])
+      await act(async () => { land({}) })
+    })
+
+    it('puts the cached list back when a write is refused', async () => {
+      client.setQueryData(queryKeys.divisions('summer'), ROWS)
+      apiPut.mockRejectedValue(new Error('no'))
+      const { result } = renderHook(() => useReorderDivisions('summer'), { wrapper })
+      await act(() => result.current.mutateAsync({ rows: ROWS, from: 0, to: 2 }).catch(() => {}))
+      expect(client.getQueryData(queryKeys.divisions('summer'))).toEqual(ROWS)
+    })
   })
 
   it('re-reads the list after every write', async () => {

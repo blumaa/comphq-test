@@ -59,7 +59,6 @@ export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete }
           size="sm"
           aria-label={`Position of ${d.name}`}
           value={rows.indexOf(d) + 1}
-          disabled={busy}
           onChange={(e) => move(d, Number(e.target.value))}
         >
           {rows.map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}

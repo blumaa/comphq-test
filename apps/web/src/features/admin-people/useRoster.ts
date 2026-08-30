@@ -57,15 +57,6 @@ export function useRoster<T extends Row>({
   const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false)
   const [swapToId, setSwapToId] = useState('')
 
-  /** v1's shape for every write that changes more than one row: hold the
-      screen, name the step, re-read, let go. */
-  const act = useCallback(async (label: string, op: () => Promise<unknown>) => {
-    setLoading(true)
-    await run(label, op)
-    await reload()
-    setLoading(false)
-  }, [reload, run, setLoading])
-
   const add = useCallback(async (body: object, reset: () => void) => {
     setLoading(true)
     await run(`Add ${noun}`, () => apiPost(`/api/${resource}`, { slug, ...body }))
@@ -140,7 +131,7 @@ export function useRoster<T extends Row>({
     editingId, setEditingId,
     confirmDeleteSelected, setConfirmDeleteSelected,
     swapToId, setSwapToId,
-    act, add, bulk, saveEdit, remove, deleteSelected, swap,
+    add, bulk, saveEdit, remove, deleteSelected, swap,
   }
 }
 

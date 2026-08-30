@@ -38,7 +38,20 @@ export function useUpdateSettings(slug: string) {
     mutationFn: (patch: SettingsPatch) =>
       apiPatch<CompetitionSettings>('/api/settings', { slug, ...patch }),
     meta: { success: 'Setting saved' },
-    onSuccess: () => {
+    // A toggle answers the hand, not the network: the patch lands in the cache
+    // first and the write follows it out. A refusal puts the old value back —
+    // the setup page's banner names the failure, which is also why the own
+    // onError here keeps the global toast quiet.
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: queryKeys.settings(slug) })
+      const prev = qc.getQueryData<CompetitionSettings>(queryKeys.settings(slug))
+      if (prev) qc.setQueryData(queryKeys.settings(slug), { ...prev, ...patch })
+      return { prev }
+    },
+    onError: (_e, _patch, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.settings(slug), ctx.prev)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: queryKeys.settings(slug) })
       // The designated tiebreak workout and the visibility rule both decide
       // what the board shows, so the board on screen is stale either way.

@@ -6,11 +6,11 @@ import { DataPanel } from '@/components/DataPanel/DataPanel'
 // Every control writes as it is changed; there is no Save button anywhere in
 // this section, and there was none in v1 either.
 //
-// The two toggles are controlled from above, so they move when the write has
-// landed. v1 flipped them first and sent the PATCH with no error handling at
-// all, which meant a refused write left the switch showing a setting the
-// server had never accepted. The failure now reaches the page banner, the same
-// forced divergence the rest of this port makes wherever v1 discarded a result.
+// The two toggles are controlled from above, and the settings mutation writes
+// the flip into the cache before the PATCH goes out — so they move under the
+// hand, as v1's did. Where v1 sent the PATCH with no error handling at all and
+// a refused write left the switch showing a setting the server had never
+// accepted, a refusal now rolls the cache back and reaches the page banner.
 //
 // The two boxes keep their own text while it is being typed and save on blur,
 // which is v1's. They are seeded once: v1 read the settings a single time too.
@@ -20,7 +20,6 @@ interface Props {
   leaderboardVisibility: 'per_heat' | 'per_workout'
   judgePassword: string
   judgeMaxConsecutive: number
-  busy?: boolean
   onPatch: (patch: {
     showBib?: boolean
     leaderboardVisibility?: 'per_heat' | 'per_workout'
@@ -30,7 +29,7 @@ interface Props {
 }
 
 export function CompetitionSettingsSection({
-  showBib, leaderboardVisibility, judgePassword, judgeMaxConsecutive, busy, onPatch,
+  showBib, leaderboardVisibility, judgePassword, judgeMaxConsecutive, onPatch,
 }: Props) {
   const [password, setPassword] = useState(judgePassword)
   const [consecutive, setConsecutive] = useState(String(judgeMaxConsecutive))
@@ -62,7 +61,6 @@ export function CompetitionSettingsSection({
             label="Show Bib Numbers"
             aria-describedby="setup-bib-hint"
             checked={showBib}
-            loading={busy}
             onChange={() => patch({ showBib: !showBib })}
           />
           <Text id="setup-bib-hint" variant="note" tone="muted">
@@ -75,7 +73,6 @@ export function CompetitionSettingsSection({
             label="Live Leaderboard"
             aria-describedby="setup-live-hint"
             checked={perHeat}
-            loading={busy}
             onChange={() => patch({ leaderboardVisibility: perHeat ? 'per_workout' : 'per_heat' })}
           />
           <Text id="setup-live-hint" variant="note" tone="muted">

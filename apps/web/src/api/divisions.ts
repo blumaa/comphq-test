@@ -42,6 +42,16 @@ export function useSaveDivision(slug: string) {
     apiPut(`/api/divisions/${id}?slug=${slug}`, body))
 }
 
+/** The list with one division moved and the order values the list already
+    used dealt back out down it — so a reorder never invents a number and
+    never leaves a gap. One computation serves the cache and the writes, so
+    what the screen shows is exactly what the server is being sent. */
+function dealtOrders(rows: Division[], from: number, to: number): Division[] {
+  const next = rows.slice()
+  next.splice(to, 0, ...next.splice(from, 1))
+  return next.map((division, i) => ({ ...division, order: rows[i].order }))
+}
+
 /** Moving a division to a position is a move, not an exchange.
  *
  *  v1 traded order values between the division picked and whoever already held
@@ -49,25 +59,40 @@ export function useSaveDivision(slug: string) {
  *  first (defect 23). An exchange only reads as a move when the two are next to
  *  each other; over any greater distance it scatters the rows in between.
  *
- *  The list is rebuilt with the division lifted out and put back where it was
- *  asked for, and the order values the list already used are dealt back out
- *  down it — so a reorder never invents a number and never leaves a gap. Only
- *  the rows whose value actually changed are written, and they go out together,
- *  so the set never lands half-applied.
+ *  Only the rows whose value actually changed are written, and they go out
+ *  together, so the set never lands half-applied. The pick answers the hand:
+ *  the cached list moves first and the writes follow it out; a refusal puts
+ *  the old list back, and the setup page's banner names the failure — which is
+ *  also why the own onError here keeps the global toast quiet.
  *
  *  `rows` must be in the order the list is drawn in, which is what
  *  GET /api/divisions returns.
  */
 export function useReorderDivisions(slug: string) {
-  return useDivisionWriter(slug, 'Divisions reordered', ({ rows, from, to }: { rows: Division[]; from: number; to: number }) => {
-    const next = rows.slice()
-    next.splice(to, 0, ...next.splice(from, 1))
-    const writes = next
-      .map((division, i) => ({ division, order: rows[i].order }))
-      .filter(({ division, order }) => division.order !== order)
-      .map(({ division, order }) =>
-        apiPut(`/api/divisions/${division.id}?slug=${slug}`, { order }))
-    return Promise.all(writes)
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ rows, from, to }: { rows: Division[]; from: number; to: number }) => {
+      const was = new Map(rows.map((d) => [d.id, d.order]))
+      const writes = dealtOrders(rows, from, to)
+        .filter((d) => d.order !== was.get(d.id))
+        .map((d) => apiPut(`/api/divisions/${d.id}?slug=${slug}`, { order: d.order }))
+      return Promise.all(writes)
+    },
+    meta: { success: 'Divisions reordered' },
+    onMutate: async ({ rows, from, to }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.divisions(slug) })
+      const prev = qc.getQueryData<Division[]>(queryKeys.divisions(slug))
+      qc.setQueryData(queryKeys.divisions(slug), dealtOrders(rows, from, to))
+      return { prev }
+    },
+    onError: (_e, _move, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.divisions(slug), ctx.prev)
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.divisions(slug) })
+      qc.invalidateQueries({ queryKey: queryKeys.athletes(slug) })
+      qc.invalidateQueries({ queryKey: queryKeys.leaderboard(slug) })
+    },
   })
 }
 

@@ -120,11 +120,20 @@ export function AthletesTab({
     void roster.bulk(entries, () => { setBulkText(''); close() })
   }
 
+  // One flag on one row, and the same button takes it back — so the row flips
+  // where it stands and the write follows it out. A refusal flips it back, and
+  // the page banner names the failure. The op returns true because apiDel
+  // resolves undefined on a 204, which is also what run returns on failure.
   function withdraw(athlete: Athlete) {
     const path = `/api/athletes/${athlete.id}/withdraw?slug=${slug}`
-    void (athlete.withdrawn
-      ? roster.act('Un-withdraw athlete', () => apiDel(path))
-      : roster.act('Withdraw athlete', () => apiPost(path, {})))
+    const was = athlete.withdrawn
+    const mark = (w: boolean) =>
+      setAthletes((prev) => prev.map((a) => (a.id === athlete.id ? { ...a, withdrawn: w } : a)))
+    mark(!was)
+    void run(was ? 'Un-withdraw athlete' : 'Withdraw athlete', async () => {
+      await (was ? apiDel(path) : apiPost(path, {}))
+      return true
+    }).then((ok) => { if (!ok) mark(was) })
   }
 
   // The label is only passed where there is no Field to carry one — a Field

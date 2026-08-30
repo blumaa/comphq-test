@@ -204,6 +204,34 @@ describe('changing one athlete', () => {
     await waitFor(() => expect(apiDel).toHaveBeenCalledWith('/api/athletes/2/withdraw?slug=rugged-rumble'))
   })
 
+  /** What the flip left in the list: the first updater passed to setAthletes,
+      applied to the roster as drawn. */
+  const flipped = (setAthletes: ReturnType<typeof vi.fn>, call: number) =>
+    (setAthletes.mock.calls[call][0] as (prev: Athlete[]) => Athlete[])(ATHLETES)
+
+  // One flag on one row: the row flips where it stands, and nothing reloads.
+  it('flips the row before the server answers, without a reload', async () => {
+    const { setAthletes, reload } = draw()
+    let land!: (v: unknown) => void
+    apiPost.mockReturnValue(new Promise((r) => { land = r }))
+    openEditor('Ann Adams')
+    fireEvent.click(sheet('Ann Adams').getByRole('button', { name: 'Withdraw' }))
+    expect(flipped(setAthletes, 0).find((a) => a.id === 1)?.withdrawn).toBe(true)
+    land({})
+    await waitFor(() => expect(apiPost).toHaveBeenCalled())
+    expect(reload).not.toHaveBeenCalled()
+    expect(setAthletes).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes the flip back when the write is refused', async () => {
+    const { setAthletes } = draw()
+    apiPost.mockRejectedValue(new Error('scored heat'))
+    openEditor('Ann Adams')
+    fireEvent.click(sheet('Ann Adams').getByRole('button', { name: 'Withdraw' }))
+    await waitFor(() => expect(setAthletes).toHaveBeenCalledTimes(2))
+    expect(flipped(setAthletes, 1).find((a) => a.id === 1)?.withdrawn).toBe(false)
+  })
+
   it('replaces one athlete with another', async () => {
     draw()
     openEditor('Ann Adams')

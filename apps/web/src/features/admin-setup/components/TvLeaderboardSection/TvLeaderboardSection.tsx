@@ -16,13 +16,12 @@ interface Props {
   divisions: Division[]
   order: Record<string, number>
   percentages: Record<string, number>
-  busy?: boolean
   onSaveOrder: (next: Record<string, number>) => Promise<unknown>
   onSavePercentages: (next: Record<string, number>) => Promise<unknown>
 }
 
 export function TvLeaderboardSection({
-  divisions, order, percentages, busy, onSaveOrder, onSavePercentages,
+  divisions, order, percentages, onSaveOrder, onSavePercentages,
 }: Props) {
   // Only the box being typed in holds text of its own; every other row reads
   // from the settings.
@@ -59,7 +58,6 @@ export function TvLeaderboardSection({
           size="sm"
           aria-label={`TV position of ${d.name}`}
           value={order[d.name] ?? ''}
-          disabled={busy}
           onChange={(e) => setPosition(d.name, e.target.value)}
         >
           <option value="">—</option>

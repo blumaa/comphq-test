@@ -120,7 +120,6 @@ export function SetupPage() {
                 leaderboardVisibility={settings.data.leaderboardVisibility}
                 judgePassword={settings.data.judgePassword ?? 'rug702'}
                 judgeMaxConsecutive={settings.data.judgeMaxConsecutive ?? 3}
-                busy={updateSettings.isPending}
                 onPatch={(next) => patch('Save setting', next)}
               />
             )}
@@ -152,7 +151,6 @@ export function SetupPage() {
                 divisions={rows}
                 order={settings.data.tvLeaderboardOrder ?? {}}
                 percentages={settings.data.tvLeaderboardPercentages ?? {}}
-                busy={updateSettings.isPending}
                 onSaveOrder={(next) => patch('Save TV order', { tvLeaderboardOrder: next })}
                 onSavePercentages={(next) => patch('Save TV percentages', { tvLeaderboardPercentages: next })}
               />
@@ -167,7 +165,7 @@ export function SetupPage() {
             ) : (
               <DivisionsSection
                 rows={rows}
-                busy={addDivision.isPending || saveDivision.isPending || reorderDivisions.isPending}
+                busy={addDivision.isPending || saveDivision.isPending}
                 onAdd={(input) => run('Add division', addDivision.mutateAsync(input))}
                 onSave={(id, input) => run('Save division', saveDivision.mutateAsync({ id, ...input }))}
                 onMove={(from, to) => run('Reorder division', reorderDivisions.mutateAsync({ rows, from, to }))}
