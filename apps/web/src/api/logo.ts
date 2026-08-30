@@ -18,13 +18,15 @@ export function useLogo() {
   })
 }
 
-function useLogoWriter<T>(send: (input: T) => Promise<Logo>) {
+/** `success` is what the MutationCache toasts when the write lands. */
+function useLogoWriter<T>(success: string, send: (input: T) => Promise<Logo>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
     // The shells draw it, so the write has to reach the header that is
     // already on screen. Written into the cache rather than invalidated: the
     // response carries the new URL, and a re-read would only ask for it again.
+    meta: { success },
     onSuccess: (logo) => qc.setQueryData(queryKeys.logo, logo),
   })
 }
@@ -44,7 +46,7 @@ function bust(url: string) {
 
 /** The field name is the server's: it reads `logo` off the form. */
 export function useUploadLogo() {
-  return useLogoWriter(async (file: File) => {
+  return useLogoWriter('Logo uploaded', async (file: File) => {
     const form = new FormData()
     form.append('logo', file)
     const logo = await apiUpload<Logo>('/api/logo', form)
@@ -53,5 +55,5 @@ export function useUploadLogo() {
 }
 
 export function useRemoveLogo() {
-  return useLogoWriter(() => apiDel<Logo>('/api/logo'))
+  return useLogoWriter('Logo removed', () => apiDel<Logo>('/api/logo'))
 }

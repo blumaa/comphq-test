@@ -1,9 +1,7 @@
-// jsdom ships no `window.matchMedia`, and the app asks it two questions the
-// stylesheet cannot answer for it: whether the reader has asked for less
-// motion (the hero, which gsap drives by writing inline styles frame by frame,
-// so the CSS reduced-motion rule reaches none of it) and how wide the viewport
-// is (a table that is given fewer columns on a phone, rather than the same
-// columns drawn off the side of it).
+// jsdom ships no `window.matchMedia`, and the app asks it one question the
+// stylesheet cannot answer for it: how wide the viewport is (a table that is
+// given fewer columns on a phone, rather than the same columns drawn off the
+// side of it).
 //
 // jsdom has no layout, so a width query is answered from `window.innerWidth`,
 // which is the one width in the document a spec can set and the stub can read.
@@ -12,21 +10,16 @@
 
 type Listener = (event: MediaQueryListEvent) => void
 
-const REDUCE = '(prefers-reduced-motion: reduce)'
-const NO_PREFERENCE = '(prefers-reduced-motion: no-preference)'
 const WIDTH = /^\(\s*(min|max)-width:\s*(\d+)px\s*\)$/
 
 // jsdom's own default, so a spec that never mentions a viewport gets the
 // laptop it has always been getting.
 const DEFAULT_WIDTH = 1024
 
-let reduced = false
 let width = DEFAULT_WIDTH
 const lists = new Set<{ query: string; listeners: Set<Listener> }>()
 
 function evaluate(query: string): boolean {
-  if (query === REDUCE) return reduced
-  if (query === NO_PREFERENCE) return !reduced
   const match = WIDTH.exec(query)
   if (match) {
     const px = Number(match[2])
@@ -48,8 +41,8 @@ function create(query: string): MediaQueryList {
   lists.add({ query, listeners })
   return {
     media: query,
-    // A getter, because gsap re-reads `matches` off a fresh list when the
-    // query changes rather than trusting the value it was handed.
+    // A getter, so a consumer that re-reads `matches` off a held list after
+    // the viewport changes sees the new answer rather than the old one.
     get matches() { return evaluate(query) },
     onchange: null,
     addListener: (l: Listener) => listeners.add(l),
@@ -69,13 +62,6 @@ export function installMatchMedia() {
   applyWidth()
 }
 
-/** Stands in for the OS setting. Set it before rendering: a media context
-    picks its branch when it is created. */
-export function setReducedMotion(on: boolean) {
-  reduced = on
-  announce()
-}
-
 /** Stands in for the window. Set it before rendering for the viewport a spec
     is about, or during, for a phone that has just been turned on its side. */
 export function setViewport(px: number) {
@@ -84,10 +70,8 @@ export function setViewport(px: number) {
   announce()
 }
 
-/** Back to the default every test starts from: a laptop, and nobody has asked
-    for less. */
+/** Back to the default every test starts from: a laptop. */
 export function resetMatchMedia() {
-  reduced = false
   width = DEFAULT_WIDTH
   lists.clear()
 }

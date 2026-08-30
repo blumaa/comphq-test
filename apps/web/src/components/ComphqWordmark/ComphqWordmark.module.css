@@ -11,11 +11,14 @@
 }
 
 /* In a bar it is a name among links, so it takes the label role the links
-   themselves are set in — bold, because it is the one word that is not one. */
+   themselves are set in — bold, because it is the one word that is not one.
+   Tight leading, because every place this size goes is a single line inside a
+   fixed-height bar, and reading leading is height the bar cannot spare. */
 .inline {
   display: inline-block;
   font: var(--mds-type-label);
   font-weight: var(--mds-weight-bold);
+  line-height: var(--mds-leading-tight);
   letter-spacing: var(--mds-tracking-tight);
 }
 

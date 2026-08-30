@@ -26,7 +26,12 @@
 // Modes:
 //   --confirm=<ref>             required; the project ref has to be typed
 //   --today                     shift the fixture's dates onto today
-//   --owner=<email>             give this account the competition
+//   --demo                      add a second, finished competition — a clone
+//                               of the fixture left on its original (past)
+//                               dates with every workout and heat completed,
+//                               so the app shows a live event and a finished
+//                               one side by side
+//   --owner=<email>             give this account the competition(s)
 //   --password=<pw>             only used when the account is created
 
 import { randomBytes } from 'node:crypto'
@@ -66,9 +71,73 @@ const loaded = psql(DB_URL, ['-v', 'ON_ERROR_STOP=1', '-f', '-'], seed)
 if (!loaded.ok) fail('seed.sql', loaded.out)
 console.log(`seeded ${ref} from tools/golden/seed.sql`)
 
+// ─── The finished competition ─────────────────────────────────────────
+// A clone of the fixture rather than a second hand-written seed, for the
+// reason in the header: one answer to "what does a competition look like".
+// Ids are the fixture's plus 100 — the sequences sit at 1000, so nothing
+// collides. What makes it finished: the pending workout is left out, every
+// cloned workout is marked completed, every heat gets a completion row, and
+// the dates stay on the fixture's 2026-03-01, which is the past. Judge
+// assignments are not cloned — the judge schedule only shows heats still to
+// run, and a finished event has none.
+if (has('--demo')) {
+  const demo = sql(`
+    INSERT INTO "Competition" (id, name, slug)
+      VALUES (101, 'Golden Master Spring', 'golden-spring');
+    INSERT INTO "Division" (id, name, "order", "competitionId")
+      SELECT id + 100, name, "order", 101 FROM "Division" WHERE "competitionId" = 1;
+    INSERT INTO "Athlete" (id, name, "bibNumber", "divisionId", "competitionId", "userId", withdrawn)
+      SELECT id + 100, name, "bibNumber", "divisionId" + 100, 101, "userId", withdrawn
+        FROM "Athlete" WHERE "competitionId" = 1;
+    INSERT INTO "WorkoutLocation" (id, name, "competitionId")
+      SELECT id + 100, name, 101 FROM "WorkoutLocation" WHERE "competitionId" = 1;
+    INSERT INTO "Workout" (id, number, name, "scoreType", lanes, "heatIntervalSecs",
+                           "timeBetweenHeatsSecs", "callTimeSecs", "walkoutTimeSecs",
+                           "startTime", status, "mixedHeats", "tiebreakEnabled",
+                           "partBEnabled", "partBScoreType", "heatStartOverrides",
+                           "competitionId", "halfWeight", "locationId",
+                           "tiebreakScoreType", description)
+      SELECT id + 100, number, name, "scoreType", lanes, "heatIntervalSecs",
+             "timeBetweenHeatsSecs", "callTimeSecs", "walkoutTimeSecs",
+             "startTime", 'completed', "mixedHeats", "tiebreakEnabled",
+             "partBEnabled", "partBScoreType", "heatStartOverrides",
+             101, "halfWeight", "locationId" + 100,
+             "tiebreakScoreType", description
+        FROM "Workout" WHERE "competitionId" = 1 AND status <> 'pending';
+    INSERT INTO "HeatAssignment" (id, "workoutId", "athleteId", "heatNumber", lane)
+      SELECT ha.id + 100, ha."workoutId" + 100, ha."athleteId" + 100, ha."heatNumber", ha.lane
+        FROM "HeatAssignment" ha
+        JOIN "Workout" w ON w.id = ha."workoutId" AND w."competitionId" = 1;
+    INSERT INTO "HeatCompletion" ("workoutId", "heatNumber", "completedAt")
+      SELECT DISTINCT ha."workoutId", ha."heatNumber", w."startTime" + INTERVAL '30 minutes'
+        FROM "HeatAssignment" ha
+        JOIN "Workout" w ON w.id = ha."workoutId" AND w."competitionId" = 101;
+    INSERT INTO "Score" (id, "athleteId", "workoutId", "rawScore", "tiebreakRawScore",
+                         points, "partBRawScore", "partBPoints")
+      SELECT s.id + 100, s."athleteId" + 100, s."workoutId" + 100, s."rawScore",
+             s."tiebreakRawScore", s.points, s."partBRawScore", s."partBPoints"
+        FROM "Score" s
+        JOIN "Workout" w ON w.id = s."workoutId" AND w."competitionId" = 1;
+    INSERT INTO "VolunteerRole" (id, name, "competitionId")
+      SELECT id + 100, name, 101 FROM "VolunteerRole" WHERE "competitionId" = 1;
+    INSERT INTO "Volunteer" (id, name, "competitionId", "roleId")
+      SELECT id + 100, name, 101, "roleId" + 100 FROM "Volunteer" WHERE "competitionId" = 1;
+    INSERT INTO "WorkoutEquipment" (id, "workoutId", "divisionId", item)
+      SELECT we.id + 100, we."workoutId" + 100, we."divisionId" + 100, we.item
+        FROM "WorkoutEquipment" we
+        JOIN "Workout" w ON w.id = we."workoutId" AND w."competitionId" = 1;
+    INSERT INTO "Setting" ("competitionId", key, value)
+      SELECT 101, key,
+             CASE WHEN key = 'tiebreakWorkoutId' THEN ((value::int) + 100)::text ELSE value END
+        FROM "Setting" WHERE "competitionId" = 1;`)
+  if (!demo.ok) fail('--demo', demo.out)
+  console.log('demo clone added: competition 101 (golden-spring), finished')
+}
+
 // ─── Dates ────────────────────────────────────────────────────────────
 // One whole-day shift applied to both columns, so every interval the fixture
-// sets between a call time, a walkout and a heat start survives it.
+// sets between a call time, a walkout and a heat start survives it. Scoped to
+// competition 1: the --demo clone is finished and stays in the past.
 if (has('--today')) {
   const shifted = sql(`
     WITH d AS (SELECT (CURRENT_DATE - DATE '2026-03-01') AS days)
@@ -80,7 +149,8 @@ if (has('--today')) {
                  to_char(((e.value #>> '{}')::timestamptz + ((SELECT days FROM d) * INTERVAL '1 day'))
                            AT TIME ZONE 'UTC',
                          'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
-          FROM jsonb_each(w."heatStartOverrides") e), '{}'::jsonb);`)
+          FROM jsonb_each(w."heatStartOverrides") e), '{}'::jsonb)
+    WHERE w."competitionId" = 1;`)
   if (!shifted.ok) fail('--today', shifted.out)
   console.log('dates shifted onto today')
 }
@@ -115,11 +185,11 @@ if (email) {
       VALUES ('${user.id}', true, now())
       ON CONFLICT (id) DO UPDATE SET "isSuper" = true;
     INSERT INTO "CompetitionAdmin" ("userId", "competitionId", role, "createdAt")
-      VALUES ('${user.id}', 1, 'admin', now())
+      SELECT '${user.id}', c.id, 'admin', now() FROM "Competition" c
       ON CONFLICT ("userId", "competitionId") DO UPDATE SET role = 'admin';`)
   if (!granted.ok) fail('owner', granted.out)
 
-  console.log(`${email} administers competition 1${password ? ` (created; password: ${password})` : ''}`)
+  console.log(`${email} administers every seeded competition${password ? ` (created; password: ${password})` : ''}`)
 }
 
 const counts = psql(DB_URL, ['-A', '-F', '\t', '-c', `

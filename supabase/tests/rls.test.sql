@@ -37,6 +37,13 @@ UPDATE "UserProfile" SET "isSuper" = true
 INSERT INTO "CompetitionAdmin" ("userId", "competitionId")
   VALUES ('00000000-0000-4000-8000-000000000002', 900001);
 
+-- One secret row and the two check rows, so the scoped Setting policy below
+-- is proved against both kinds at once.
+INSERT INTO "Setting" ("competitionId", key, value) VALUES
+  (900001, 'judgePassword', 'rls-secret'),
+  (900001, 'athleteChecks', '{}'),
+  (900001, 'equipChecks', '{}');
+
 -- ─── Competition ────────────────────────────────────────────────────────
 SELECT test.as_anon();
 SELECT test.ok(
@@ -193,9 +200,17 @@ SELECT test.ok(
   test.visible($$SELECT * FROM "Competition" WHERE id = 900001$$) = 1,
   'anon CAN read Competition'
 );
+-- Setting is admin-only except the two rows the checks realtime channel
+-- rides on (migration 20260830120000_realtime_checks.sql). The content of
+-- those two is public through GET /api/checks already; judgePassword and
+-- every other key must stay invisible.
 SELECT test.ok(
-  test.visible($$SELECT * FROM "Setting"$$) = 0,
-  'anon reads zero Setting rows — admin-only table'
+  test.visible($$SELECT * FROM "Setting" WHERE key IN ('athleteChecks', 'equipChecks')$$) = 2,
+  'anon CAN read the two checks rows of Setting — the realtime channel rides on them'
+);
+SELECT test.ok(
+  test.visible($$SELECT * FROM "Setting" WHERE key NOT IN ('athleteChecks', 'equipChecks')$$) = 0,
+  'anon reads no other Setting row — judgePassword stays invisible'
 );
 
 SELECT test.as_service();

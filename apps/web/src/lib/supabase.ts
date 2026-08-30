@@ -21,7 +21,13 @@ let client: SupabaseClient | undefined
 // local `supabase functions serve` port during development. It is separate
 // from `url` because auth and Realtime still have to reach the hosted project
 // while the functions answer from localhost.
-export function getSupabaseEnv(): { url: string; anonKey: string; functionsUrl: string } {
+// functionsRegion, when set, is the database's region: api.ts sends it as
+// x-region so the gateway runs every function next to the data instead of
+// wherever is closest to the caller. Unset locally — `supabase functions
+// serve` has no regions.
+export function getSupabaseEnv(): {
+  url: string; anonKey: string; functionsUrl: string; functionsRegion?: string
+} {
   const url = import.meta.env.VITE_SUPABASE_URL
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
   if (!url || !anonKey) {
@@ -34,6 +40,7 @@ export function getSupabaseEnv(): { url: string; anonKey: string; functionsUrl: 
     url: trim(url),
     anonKey,
     functionsUrl: trim(import.meta.env.VITE_FUNCTIONS_URL || url),
+    functionsRegion: import.meta.env.VITE_FUNCTIONS_REGION || undefined,
   }
 }
 

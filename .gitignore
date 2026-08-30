@@ -14,3 +14,4 @@ supabase/.temp/
 .DS_Store
 .playwright-mcp/
 .claude/
+.vercel

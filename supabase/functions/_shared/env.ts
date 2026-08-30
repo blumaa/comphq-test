@@ -25,8 +25,13 @@ function readEnv(): Record<string, string | undefined> {
 // Deployed functions cannot receive custom secrets named SUPABASE_* — the
 // platform reserves the prefix — but it injects SUPABASE_SERVICE_ROLE_KEY.
 // Map it to the name v1 used so the same code runs deployed and locally.
+//
+// The same reservation blocks overriding the injected SUPABASE_DB_URL, which
+// points at the direct connection; the transaction-pooler URL is set under
+// DB_POOLER_URL and takes precedence when present.
 export function withPlatformAliases(env: Record<string, string | undefined>) {
-  return env.SUPABASE_SERVICE_KEY ? env : { ...env, SUPABASE_SERVICE_KEY: env.SUPABASE_SERVICE_ROLE_KEY }
+  const withKey = env.SUPABASE_SERVICE_KEY ? env : { ...env, SUPABASE_SERVICE_KEY: env.SUPABASE_SERVICE_ROLE_KEY }
+  return withKey.DB_POOLER_URL ? { ...withKey, SUPABASE_DB_URL: withKey.DB_POOLER_URL } : withKey
 }
 
 function parse(): Env {

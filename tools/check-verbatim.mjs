@@ -54,10 +54,6 @@ const VERBATIM_APP = [
   ['src/lib/http.ts', 'src/lib/http.ts'],
   ['src/lib/http.test.ts', 'src/lib/http.test.ts'],
   ['src/lib/keyNav.ts', 'src/lib/keyNav.ts'],
-  // Framework-free React: the query defaults are tuned to the live-comp
-  // refetch behaviour and the CDN s-maxage on the public reads, so they are
-  // behaviour, not setup.
-  ['src/lib/QueryProvider.tsx', 'src/lib/QueryProvider.tsx'],
   ['src/lib/keyNav.test.ts', 'src/lib/keyNav.test.ts'],
   // ComphqLogo.tsx was here, and is gone on purpose. It was a copy because a
   // brand that re-points a token has no business re-drawing the podium — but
@@ -69,9 +65,6 @@ const VERBATIM_APP = [
   // runtimes compute it: the server for /api/ops, the screen for the countdown
   // beside each heat. Two copies of one v1 file, both held to it.
   ['src/lib/heatTime.ts', 'src/lib/heatTime.ts'],
-  // Live invalidation. The polling fallback in QueryProvider is what carries a
-  // dropped socket, so the two belong to the same behaviour.
-  ['src/lib/useRealtimeInvalidation.ts', 'src/lib/useRealtimeInvalidation.ts'],
   // datetime-local to RFC3339. The same file the functions carry, for the same
   // reason heatTime.ts is carried twice: the form produces the value and the
   // zod schema at the other end defines what it has to be.
@@ -110,6 +103,8 @@ const ADAPTED = {
   'supabase-server.ts': 'rewritten: Edge Functions carry the token on the Authorization header, not a next/headers cookie',
   'request-context.ts': 'new: replaces Next ambient per-request state',
   'useWorkoutDetail.ts': 'v1 bounced the admin to the list on any load failure and swallowed rejections behind ConfirmDialogs; now only a 404 redirects, dialog actions rethrow so the prompt holds open, and refresh sets loading/error state',
+  'src/lib/QueryProvider.tsx': "v1's query defaults kept byte-identical in spirit (refetch tuning unchanged); adds a MutationCache so every mutation reports — global error toast unless the call site handles its own onError, success toast when the mutation names one in meta.success. v1 had per-page feedback or none",
+  'src/lib/useRealtimeInvalidation.ts': 'v1 invalidated on every row event, which is one leaderboard refetch per row on every open screen during a scoring burst; now leading+trailing throttled, and subscribes to the two checks rows of Setting so the checks poll could slow from 3s to 15s',
 }
 
 // Mechanical rewrites applied to v1's text before comparing, so the copy is
@@ -126,16 +121,9 @@ const TRANSFORMS = {
     spec.endsWith('.ts') || spec.endsWith('.js') ? m : `from '${spec}.ts'`),
 }
 
-// v1 split its Supabase clients by runtime: supabase-client.ts for the browser,
-// supabase-server.ts for a request. v3's SPA has one, src/lib/supabase.ts, so
-// the specifier is rewritten rather than the file edited.
-TRANSFORMS['supabase-client'] = (text) =>
-  text.replace(/from '\.\/supabase-client'/g, "from './supabase'")
-
 const TRANSFORMED = {
   'audit.ts': ['relative-ts'],
   'workoutEnums.ts': ['relative-ts'],
-  'src/lib/useRealtimeInvalidation.ts': ['supabase-client'],
 }
 
 // Deliberately deleted from an otherwise verbatim file. The block is removed

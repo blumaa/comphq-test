@@ -56,4 +56,16 @@ describe('withPlatformAliases', () => {
     const env = omit(valid, 'SUPABASE_SERVICE_KEY')
     expect(withPlatformAliases(env).SUPABASE_SERVICE_KEY).toBeUndefined()
   })
+
+  // The platform injects SUPABASE_DB_URL pointing at the direct connection and
+  // refuses custom secrets with the SUPABASE_ prefix, so the transaction-pooler
+  // URL arrives under a settable name and must win over the injected one.
+  it('prefers DB_POOLER_URL over the injected SUPABASE_DB_URL', () => {
+    const env = { ...valid, DB_POOLER_URL: 'postgres://u:p@pooler:6543/db' }
+    expect(withPlatformAliases(env).SUPABASE_DB_URL).toBe('postgres://u:p@pooler:6543/db')
+  })
+
+  it('keeps SUPABASE_DB_URL when no pooler URL is set', () => {
+    expect(withPlatformAliases(valid).SUPABASE_DB_URL).toBe(valid.SUPABASE_DB_URL)
+  })
 })

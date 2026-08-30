@@ -18,16 +18,18 @@ export function useUsers() {
   return useQuery({ queryKey: queryKeys.users, queryFn: () => apiGet<SiteUser[]>('/api/users') })
 }
 
-function useUserWriter<T>(send: (input: T) => Promise<unknown>) {
+/** `success` is what the MutationCache toasts when the write lands. */
+function useUserWriter<T>(success: string, send: (input: T) => Promise<unknown>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.users }),
   })
 }
 
 export function useCreateUser() {
-  return useUserWriter((input: {
+  return useUserWriter('User created', (input: {
     email: string
     password: string
     isSuper: boolean
@@ -38,7 +40,7 @@ export function useCreateUser() {
 /** PATCH syncs rather than merges: the competitionIds sent become the whole
     set, so an edit always carries every membership the user is to keep. */
 export function useUpdateUser() {
-  return useUserWriter(({ userId, ...body }: {
+  return useUserWriter('User saved', ({ userId, ...body }: {
     userId: string
     isSuper: boolean
     competitionIds: number[]
@@ -46,7 +48,7 @@ export function useUpdateUser() {
 }
 
 export function useDeleteUser() {
-  return useUserWriter((userId: string) => apiDel(`/api/users/${userId}`))
+  return useUserWriter('User deleted', (userId: string) => apiDel(`/api/users/${userId}`))
 }
 
 /** Sends the account a reset link. Nothing about the account changes, so

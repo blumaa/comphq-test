@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { getJson, postJson, putJson, patchJson, delJson, getSession, env, HttpError } = vi.hoisted(() => ({
   getJson: vi.fn(), postJson: vi.fn(), putJson: vi.fn(),
   patchJson: vi.fn(), delJson: vi.fn(), getSession: vi.fn(),
-  env: { current: {} as { url: string; anonKey: string; functionsUrl: string } },
+  env: { current: {} as { url: string; anonKey: string; functionsUrl: string; functionsRegion?: string } },
   HttpError: class HttpError extends Error {
     constructor(readonly status: number, message: string) { super(message) }
   },
@@ -86,6 +86,20 @@ describe('auth headers', () => {
   it('lets a caller override a header', async () => {
     await apiGet('/api/export', { headers: { accept: 'text/csv' } })
     expect(getJson.mock.calls[0][1].headers).toMatchObject({ accept: 'text/csv', apikey: 'anon-key' })
+  })
+
+  // The gateway reads x-region and runs the function there. The database is
+  // in one region, so pinning execution beside it takes a cross-continent
+  // round-trip out of every request.
+  it('pins the execution region when the env names one', async () => {
+    env.current = { ...DEFAULT_ENV, functionsRegion: 'us-west-2' }
+    await apiPost('/api/athletes', { name: 'Cy' })
+    expect(postJson.mock.calls[0][2].headers).toMatchObject({ 'x-region': 'us-west-2' })
+  })
+
+  it('sends no x-region when the env names none', async () => {
+    await apiGet('/api/me')
+    expect(getJson.mock.calls[0][1].headers).not.toHaveProperty('x-region')
   })
 })
 

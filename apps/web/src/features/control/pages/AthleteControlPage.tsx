@@ -58,7 +58,7 @@ export function AthleteControlPage() {
   // v1 subscribed to the heats and not to the checks. A tick made on another
   // phone therefore lands with the three-second poll instead of at once, which
   // is fast enough for a box and is kept.
-  const realtimeKeys = useMemo(() => [queryKeys.ops(slug)], [slug])
+  const realtimeKeys = useMemo(() => [queryKeys.ops(slug), queryKeys.checks(slug)], [slug])
   useRealtimeInvalidation(realtimeKeys)
 
   const conflicts = useMemo(() => findConflicts(workouts), [workouts])

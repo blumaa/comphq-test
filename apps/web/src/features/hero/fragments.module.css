@@ -1,7 +1,0 @@
-/* A fragment is created by hand rather than rendered, so this class is
-   assigned in JS. It is positioned by the letter's parent and gsap writes
-   everything else — size, colour, offset — as inline style. */
-.fragment {
-  position: absolute;
-  pointer-events: none;
-}

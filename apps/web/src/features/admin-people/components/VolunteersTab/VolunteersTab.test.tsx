@@ -194,6 +194,6 @@ describe('changing several at once', () => {
     press('Delete 2 selected')
     expect(apiDel).not.toHaveBeenCalled()
     press('Delete 2')
-    await waitFor(() => expect(apiDel).toHaveBeenCalledWith('/api/volunteers', { ids: [8, 9] }))
+    await waitFor(() => expect(apiDel).toHaveBeenCalledWith('/api/volunteers', { slug: 'rugged-rumble', ids: [8, 9] }))
   })
 })

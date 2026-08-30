@@ -1,4 +1,4 @@
-import { EmptyState, Stack } from '@mond-design-system/react'
+import { EmptyState, Skeleton, Stack } from '@mond-design-system/react'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import {
@@ -94,6 +94,11 @@ export function SetupPage() {
     <EmptyState title={`Could not load the ${what}`} description={err.message} />
   )
 
+  /** An unanswered read is not an empty list either: a section drawn with no
+      rows while its read is in flight says "No divisions yet" about divisions
+      that exist, then redraws full a beat later. */
+  const loading = <div aria-busy="true"><Skeleton lines={3} /></div>
+
   return (
     <PageFrame title="Setup" description="Competition structure and roles" wide>
       {error && (
@@ -107,6 +112,7 @@ export function SetupPage() {
 
         <Stack gap="section" className={styles.sections}>
           <div id="setup-settings">
+            {settings.isPending && loading}
             {!settings.data && settings.error && failed('settings', settings.error)}
             {settings.data && (
               <CompetitionSettingsSection
@@ -121,7 +127,9 @@ export function SetupPage() {
           </div>
 
           <div id="setup-logo">
-            {!logo.data && logo.error ? (
+            {logo.isPending ? (
+              loading
+            ) : !logo.data && logo.error ? (
               failed('logo', logo.error)
             ) : (
               <LogoSection
@@ -136,6 +144,7 @@ export function SetupPage() {
           <div id="setup-tv">
             {/* The TV table is keyed by division name, so it needs both reads:
                 a failed divisions read must not render as "No divisions to show". */}
+            {(settings.isPending || divisions.isPending) && loading}
             {!settings.data && settings.error && failed('TV leaderboard', settings.error)}
             {settings.data && !divisions.data && divisions.error && failed('TV leaderboard', divisions.error)}
             {settings.data && !(divisions.error && !divisions.data) && (
@@ -151,7 +160,9 @@ export function SetupPage() {
           </div>
 
           <div id="setup-divisions">
-            {!divisions.data && divisions.error ? (
+            {divisions.isPending ? (
+              loading
+            ) : !divisions.data && divisions.error ? (
               failed('divisions', divisions.error)
             ) : (
               <DivisionsSection
@@ -166,7 +177,9 @@ export function SetupPage() {
           </div>
 
           <div id="setup-locations">
-            {!locations.data && locations.error ? (
+            {locations.isPending ? (
+              loading
+            ) : !locations.data && locations.error ? (
               failed('locations', locations.error)
             ) : (
             <NamedListSection
@@ -189,7 +202,9 @@ export function SetupPage() {
           </div>
 
           <div id="setup-roles">
-            {!roles.data && roles.error ? (
+            {roles.isPending ? (
+              loading
+            ) : !roles.data && roles.error ? (
               failed('volunteer roles', roles.error)
             ) : (
             <NamedListSection

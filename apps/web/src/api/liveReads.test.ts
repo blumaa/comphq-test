@@ -25,7 +25,7 @@ describe('live reads', () => {
     expect(leaderboardOptions('summer').refetchInterval).toBe(15_000)
     expect(opsOptions('summer').refetchInterval).toBe(10_000)
     expect(scheduleOptions('summer').refetchInterval).toBe(10_000)
-    expect(checksOptions('summer').refetchInterval).toBe(3_000)
+    expect(checksOptions('summer').refetchInterval).toBe(15_000)
     expect(checksOptions('summer').staleTime).toBe(0)
   })
 

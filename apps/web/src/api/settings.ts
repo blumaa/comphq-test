@@ -37,6 +37,7 @@ export function useUpdateSettings(slug: string) {
   return useMutation({
     mutationFn: (patch: SettingsPatch) =>
       apiPatch<CompetitionSettings>('/api/settings', { slug, ...patch }),
+    meta: { success: 'Setting saved' },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.settings(slug) })
       // The designated tiebreak workout and the visibility rule both decide

@@ -85,7 +85,7 @@ describe('WelcomePage', () => {
     apiGet.mockReturnValue(new Promise(() => {}))
     mount()
     expect(screen.queryByText('No competitions yet')).not.toBeInTheDocument()
-    expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading competitions' })).toBeInTheDocument()
   })
 
   // A failed read is the same lie by another route.

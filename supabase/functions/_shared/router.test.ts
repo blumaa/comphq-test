@@ -76,6 +76,9 @@ describe('createRouter', () => {
     expect(res.status).toBe(204)
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
     expect(res.headers.get('Access-Control-Allow-Headers')).toContain('authorization')
+    // The SPA pins execution region with an x-region header; a preflight that
+    // does not allow it would block every browser request that carries it.
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('x-region')
     expect(handler).not.toHaveBeenCalled()
   })
 
@@ -107,12 +110,23 @@ describe('createRouter', () => {
     expect(res.headers.get('Access-Control-Expose-Headers')).toContain('Content-Disposition')
   })
 
-  it('turns a handler throw into a 500 rather than a dead worker', async () => {
+  // The detail is the thrown message: a 500 that says only "Internal Server
+  // Error" sends whoever hit it into the function logs for something the
+  // response already knew.
+  it('turns a handler throw into a 500 that names the failure', async () => {
     const router = createRouter('checks', [{
       method: 'GET', pattern: '/checks', handler: () => { throw new Error('boom') },
     }])
     const res = await router(req('GET', '/checks'))
     expect(res.status).toBe(500)
-    expect(await res.json()).toEqual({ error: 'Internal Server Error' })
+    expect(await res.json()).toEqual({ error: 'Internal Server Error', detail: 'boom' })
+  })
+
+  it('names a non-Error throw too', async () => {
+    const router = createRouter('checks', [{
+      method: 'GET', pattern: '/checks', handler: () => { throw 'string throw' },
+    }])
+    const res = await router(req('GET', '/checks'))
+    expect(await res.json()).toEqual({ error: 'Internal Server Error', detail: 'string throw' })
   })
 })

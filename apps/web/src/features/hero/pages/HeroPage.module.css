@@ -1,6 +1,0 @@
-/* The cover is positioned against this while the scene is still arriving;
-   afterwards the scene fills it. */
-.stage {
-  position: relative;
-  height: 100svh;
-}

@@ -111,7 +111,10 @@ test.describe('admin CRUD through the screens', () => {
     await form.getByRole('textbox', { name: 'Name', exact: true }).fill('DupTest B')
     await form.getByRole('button', { name: 'Create Workout' }).click()
 
-    const banner = page.getByRole('alert')
+    // Scoped to the form: the failure is reported twice on purpose — a global
+    // toast (also role=alert) fires for every unhandled mutation failure, and
+    // the dialog holds its own copy where the number being retyped is.
+    const banner = form.getByRole('alert')
     await expect(banner).toBeVisible({ timeout: 10_000 })
     await expect(banner).toContainText(/number 42 already exists/i)
     await expect(page.getByRole('link', { name: /DupTest B/ })).toHaveCount(0)

@@ -69,9 +69,13 @@ export const scheduleOptions = <T>(slug: string) => ({
 })
 
 /** Corral, walkout and equipment ticks. Two people tick these at once from
-    opposite ends of a floor, so it is the fastest poll and never served stale. */
+    opposite ends of a floor. v1 polled at 3s to carry that; the realtime
+    subscription on the two checks rows of Setting now delivers the other
+    person's tick in under a second, so the poll is only the safety net for a
+    dropped socket and runs at the leaderboard's rate. staleTime 0 stays: a
+    screen that mounts always asks, it just no longer asks every 3 seconds. */
 export const checksOptions = <T>(slug: string) => ({
-  ...options<T>(queryKeys.checks(slug), `/api/checks?slug=${slug}`, 3_000),
+  ...options<T>(queryKeys.checks(slug), `/api/checks?slug=${slug}`, 15_000),
   enabled: !!slug,
   staleTime: 0,
 })

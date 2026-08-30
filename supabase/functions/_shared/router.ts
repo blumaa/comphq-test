@@ -28,7 +28,7 @@ export type Route = { method: string; pattern: string; handler: Handler<any> }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-region',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   // The export routes name the file they serve. Without this the browser hides
   // that header cross-origin and the client has to invent the name.
@@ -105,7 +105,10 @@ export function createRouter(base: string, routes: Route[]) {
       return withCors(res)
     } catch (e) {
       console.error(`${req.method} ${path}`, e)
-      return withCors(Response.json({ error: 'Internal Server Error' }, { status: 500 }))
+      // The message rides along as `detail`: without it every distinct failure
+      // reads as the same three words and can only be told apart in the logs.
+      const detail = e instanceof Error ? e.message : String(e)
+      return withCors(Response.json({ error: 'Internal Server Error', detail }, { status: 500 }))
     }
   }
 }

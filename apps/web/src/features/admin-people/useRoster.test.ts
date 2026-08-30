@@ -99,7 +99,7 @@ describe('removing', () => {
     const { result, reload } = mount()
     act(() => { result.current.setSelected(['1', '2']); result.current.setConfirmDeleteSelected(true) })
     await act(() => result.current.deleteSelected())
-    expect(apiDel).toHaveBeenCalledWith('/api/athletes', { ids: [1, 2] })
+    expect(apiDel).toHaveBeenCalledWith('/api/athletes', { slug: 'rugged-rumble', ids: [1, 2] })
     expect(result.current.selected).toEqual([])
     expect(reload).toHaveBeenCalled()
   })

@@ -48,6 +48,33 @@ describe('CompetitionBrand', () => {
     expect(screen.queryByRole('img', { name: 'Competition logo' })).not.toBeInTheDocument()
   })
 
+  // The mark in the corner is the way home on every site people know, so it
+  // is one here too — whichever mark the bar happens to carry.
+  it('links home when it carries the lockup', () => {
+    apiGet.mockImplementation(() => new Promise(() => {}))
+    mount()
+    const home = screen.getByRole('link', { name: 'CompHQ home' })
+    expect(home).toHaveAttribute('href', '/')
+    expect(home).toContainElement(lockup())
+  })
+
+  // The admin bars carry the same lockup but their "home" is the admin index,
+  // so the destination is a prop rather than a second component.
+  it('links where an admin bar points it', () => {
+    apiGet.mockImplementation(() => new Promise(() => {}))
+    mount(<CompetitionBrand href="/admin" />)
+    expect(screen.getByRole('link', { name: 'CompHQ home' })).toHaveAttribute('href', '/admin')
+  })
+
+  it('links home when it carries an uploaded logo', async () => {
+    apiGet.mockResolvedValue({ url: 'https://cdn.example/logo.png' })
+    mount()
+    const logo = await screen.findByRole('img', { name: 'Competition logo' })
+    const home = screen.getByRole('link', { name: 'CompHQ home' })
+    expect(home).toHaveAttribute('href', '/')
+    expect(home).toContainElement(logo)
+  })
+
   // v1 asked from an effect inside its nav, so every public page fetched it
   // again. It is one shared query now, whoever draws it.
   it('asks for the logo once however many bars draw it', async () => {

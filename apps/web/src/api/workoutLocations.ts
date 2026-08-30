@@ -15,10 +15,12 @@ export function useWorkoutLocations(slug: string) {
   })
 }
 
-function useLocationWriter<T>(slug: string, send: (input: T) => Promise<unknown>) {
+/** `success` is what the MutationCache toasts when the write lands. */
+function useLocationWriter<T>(slug: string, success: string, send: (input: T) => Promise<unknown>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workoutLocations(slug) })
       // A deleted location unassigns the workouts held there, so the workouts
@@ -29,14 +31,16 @@ function useLocationWriter<T>(slug: string, send: (input: T) => Promise<unknown>
 }
 
 export function useAddWorkoutLocation(slug: string) {
-  return useLocationWriter(slug, (name: string) => apiPost('/api/workout-locations', { slug, name }))
+  return useLocationWriter(slug, 'Location added', (name: string) =>
+    apiPost('/api/workout-locations', { slug, name }))
 }
 
 export function useSaveWorkoutLocation(slug: string) {
-  return useLocationWriter(slug, ({ id, name }: { id: number; name: string }) =>
+  return useLocationWriter(slug, 'Location saved', ({ id, name }: { id: number; name: string }) =>
     apiPut(`/api/workout-locations/${id}?slug=${slug}`, { name }))
 }
 
 export function useDeleteWorkoutLocation(slug: string) {
-  return useLocationWriter(slug, (id: number) => apiDel(`/api/workout-locations/${id}?slug=${slug}`))
+  return useLocationWriter(slug, 'Location deleted', (id: number) =>
+    apiDel(`/api/workout-locations/${id}?slug=${slug}`))
 }

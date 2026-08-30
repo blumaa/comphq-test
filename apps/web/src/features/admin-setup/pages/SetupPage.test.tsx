@@ -101,6 +101,18 @@ it('offers a way to each region without scrolling to it', async () => {
   expect(document.getElementById('setup-roles')).toBeInTheDocument()
 })
 
+// An unanswered read is not an empty list: "No divisions yet" while the
+// divisions are still loading invites re-creating what exists, and the flash
+// from empty to full reads as the screen redrawing under the hand.
+it('shows placeholders while the reads are in flight, not empty lists', () => {
+  apiGet.mockImplementation(() => new Promise(() => {}))
+  mount()
+  expect(screen.queryByText('No divisions yet')).not.toBeInTheDocument()
+  expect(screen.queryByText('No locations yet')).not.toBeInTheDocument()
+  expect(screen.queryByText('No volunteer roles yet')).not.toBeInTheDocument()
+  expect(document.querySelectorAll('[aria-busy="true"]').length).toBeGreaterThan(0)
+})
+
 it('adds a division after the last one in the running order', async () => {
   mount()
   await screen.findAllByText('RX')  // divisions table and TV table both name it

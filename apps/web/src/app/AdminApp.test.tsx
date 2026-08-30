@@ -77,11 +77,22 @@ describe('AdminApp', () => {
   })
 
   // v1 read isSuper off a 200 body only; any other outcome fell through to the
-  // non-super branch rather than to an error screen.
-  it('treats an unreadable /api/me as not super', async () => {
+  // non-super branch. But a failed read is not an answer: "Access required"
+  // over a network error tells a real super-admin they were demoted.
+  it('reports an unreadable /api/me instead of calling it not super', async () => {
     serve({ '/api/competitions/mine': [] })
     mount()
-    expect(await screen.findByRole('heading', { name: /access required/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /could not check access/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /access required/i })).not.toBeInTheDocument()
+  })
+
+  it('retries a failed access check and lets the super through', async () => {
+    serve({ '/api/competitions/mine': [] })
+    mount()
+    await screen.findByRole('heading', { name: /could not check access/i })
+    serve({ '/api/me': { id: 'u1', email: USER.email, isSuper: true }, '/api/competitions/mine': [] })
+    screen.getByRole('button', { name: /try again/i }).click()
+    expect(await screen.findByText('site dashboard')).toBeInTheDocument()
   })
 
   it('signs out and returns to login', async () => {

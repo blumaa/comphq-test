@@ -29,10 +29,17 @@ export function apiUrl(path: string): string {
 //
 // Read per call rather than cached, because supabase-js rotates the access
 // token on its own schedule and a cached one goes stale mid-session.
+// x-region, when configured, pins where the function runs. The database is in
+// one region; without the pin the gateway runs the function nearest the
+// caller, and a caller on another continent pays that distance on every query.
 async function authHeaders(): Promise<Record<string, string>> {
-  const { anonKey } = getSupabaseEnv()
+  const { anonKey, functionsRegion } = getSupabaseEnv()
   const { data } = await getSupabaseClient().auth.getSession()
-  return { apikey: anonKey, authorization: `Bearer ${data.session?.access_token ?? anonKey}` }
+  return {
+    apikey: anonKey,
+    authorization: `Bearer ${data.session?.access_token ?? anonKey}`,
+    ...(functionsRegion ? { 'x-region': functionsRegion } : {}),
+  }
 }
 
 async function read(init?: RequestInit): Promise<RequestInit> {

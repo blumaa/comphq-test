@@ -6,7 +6,7 @@ import {
   Input,
   ListGroup,
   ListItem,
-  Skeleton,
+  Spinner,
   Stack,
   Text,
 } from '@mond-design-system/react'
@@ -46,9 +46,12 @@ export function WelcomePage() {
         {competitions.error ? (
           <EmptyState title="Could not load the competitions" description={competitions.error.message} />
         ) : competitions.isPending ? (
-          <div aria-busy="true">
-            <Skeleton lines={4} />
-          </div>
+          /* A spinner rather than a skeleton: what lands is a search input
+             and a list, not text lines, and this centered column has no
+             surrounding layout a skeleton would hold steady. */
+          <Centered>
+            <Spinner label="Loading competitions" />
+          </Centered>
         ) : all.length === 0 ? (
           <EmptyState
             title="No competitions yet"

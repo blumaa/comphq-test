@@ -1,13 +1,22 @@
-.lockup {
-  display: flex;
-  align-items: center;
-  gap: var(--mds-gap-tight);
+/* The anchor is invisible chrome: the marks inside carry the identity. */
+.home {
+  display: inline-flex;
+  text-decoration: none;
+  color: inherit;
 }
 
-/* Both marks are the same height. An uploaded logo and the fallback leave the
-   bar the same size, so it does not change height the moment a competition
-   uploads one — which on a phone moves the whole page under the reader's
-   thumb. The fallback is square artwork; a logo keeps its own proportion. */
+/* The wordmark sits underneath the mark rather than beside it, so the two
+   read as one stacked identity instead of two misaligned neighbours. */
+.lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The bar's height is fixed by --mds-header-h (56px), so neither mark can
+   change it — but content taller than the bar overflows it. The stack fills
+   the bar: 40px of artwork plus the tight label line beneath comes to ~55px.
+   An uploaded logo keeps its own proportion inside the same 40px. */
 .mark {
   width: var(--mds-space-9);
   height: var(--mds-space-9);

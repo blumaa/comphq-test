@@ -159,7 +159,7 @@ function EquipmentControl({ slug }: { slug: string }) {
   const equipmentByWorkout = useWorkoutEquipment(slug, workouts.map((w) => w.id))
   const [resetting, setResetting] = useState(false)
 
-  const realtimeKeys = useMemo(() => [queryKeys.ops(slug)], [slug])
+  const realtimeKeys = useMemo(() => [queryKeys.ops(slug), queryKeys.checks(slug)], [slug])
   useRealtimeInvalidation(realtimeKeys)
 
   function toggle(workoutId: number, heatNumber: number, divisionName: string | null) {

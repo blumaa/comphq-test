@@ -277,6 +277,6 @@ describe('EquipmentPage', () => {
   it('refreshes on a live event for this competition', async () => {
     mount()
     await heat(1)
-    expect(useRealtimeInvalidation).toHaveBeenCalledWith([['ops', 'summer']])
+    expect(useRealtimeInvalidation).toHaveBeenCalledWith([['ops', 'summer'], ['checks', 'summer']])
   })
 })

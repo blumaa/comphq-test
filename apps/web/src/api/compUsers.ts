@@ -18,25 +18,28 @@ export function useCompUsers(slug: string) {
 }
 
 /** Re-read after a write: the server decides whether an email became a new
-    account or joined an existing one, so the result is not the request. */
-function useRosterWriter<T>(slug: string, send: (input: T) => Promise<unknown>) {
+    account or joined an existing one, so the result is not the request.
+    `success` is what the MutationCache toasts when the write lands. */
+function useRosterWriter<T>(slug: string, success: string, send: (input: T) => Promise<unknown>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.compUsers(slug) }),
   })
 }
 
 export function useAddCompUser(slug: string) {
-  return useRosterWriter(slug, (input: { email: string; password: string; role: CompRole }) =>
+  return useRosterWriter(slug, 'User added', (input: { email: string; password: string; role: CompRole }) =>
     apiPost('/api/comp-users', { slug, ...input }))
 }
 
 export function useSetCompUserRole(slug: string) {
-  return useRosterWriter(slug, ({ userId, role }: { userId: string; role: CompRole }) =>
+  return useRosterWriter(slug, 'Role changed', ({ userId, role }: { userId: string; role: CompRole }) =>
     apiPatch(`/api/comp-users/${userId}`, { slug, role }))
 }
 
 export function useRemoveCompUser(slug: string) {
-  return useRosterWriter(slug, (userId: string) => apiDel(`/api/comp-users/${userId}?slug=${slug}`))
+  return useRosterWriter(slug, 'User removed', (userId: string) =>
+    apiDel(`/api/comp-users/${userId}?slug=${slug}`))
 }

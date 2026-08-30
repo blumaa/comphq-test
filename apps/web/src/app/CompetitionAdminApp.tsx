@@ -1,15 +1,13 @@
 import { useEffect } from 'react'
-import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router'
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { Text } from '@mond-design-system/react'
 import { useMyCompetitions } from '@/api/competitions'
 import { useMe } from '@/api/session'
-import { useLogo } from '@/api/logo'
-import { ComphqWordmark } from '@/components/ComphqWordmark/ComphqWordmark'
+import { CompetitionBrand } from '@/components/CompetitionBrand/CompetitionBrand'
 import { useSession } from '@/lib/session'
 import { AdminShell } from '@/layouts/AdminShell'
-import { Booting, NoAccess } from './GateStates'
+import { Booting, GateFailed, NoAccess } from './GateStates'
 import { loginPath } from './loginPath'
-import styles from './CompetitionAdminApp.module.css'
 
 // The admin shell for one competition, ported from v1's
 // src/app/[slug]/admin/layout.tsx.
@@ -27,19 +25,22 @@ export function CompetitionAdminApp() {
 
   const me = useMe(!!user)
   const mine = useMyCompetitions(!!user)
-  const logo = useLogo()
 
   const membership = mine.data?.find((c) => c.slug === slug)
   const isSuper = me.data?.isSuper === true
   const waiting = me.isPending || mine.isPending
 
+  // A failed read is neither an answer nor a refusal: 'forbidden' is only
+  // reachable once both reads have answered and neither authorizes.
   const status = loading || (user && waiting)
     ? 'loading'
     : !user
       ? 'unauthenticated'
       : isSuper || membership
         ? 'authorized'
-        : 'forbidden'
+        : me.error || mine.error
+          ? 'error'
+          : 'forbidden'
 
   // A super admin administers every competition; a member does so only with
   // role='admin'.
@@ -56,6 +57,15 @@ export function CompetitionAdminApp() {
 
   if (status === 'loading' || status === 'unauthenticated') return <Booting label="Checking access" />
 
+  if (status === 'error') {
+    return (
+      <GateFailed
+        onRetry={() => { void me.refetch(); void mine.refetch() }}
+        onSignOut={handleSignOut}
+      />
+    )
+  }
+
   if (status === 'forbidden') {
     return (
       <NoAccess title="No access to this competition" onSignOut={handleSignOut}>
@@ -67,13 +77,7 @@ export function CompetitionAdminApp() {
   }
 
   const base = `/${slug}/admin`
-  const title = (
-    <Link to="/admin" className={styles.brand}>
-      {logo.data?.url
-        ? <img src={logo.data.url} alt="Competition logo" className={styles.logo} />
-        : <ComphqWordmark size="inline" />}
-    </Link>
-  )
+  const title = <CompetitionBrand href="/admin" />
 
   return (
     <AdminShell

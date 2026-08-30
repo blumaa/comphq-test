@@ -15,23 +15,27 @@ export function useVolunteerRoles(slug: string) {
   })
 }
 
-function useRoleWriter<T>(slug: string, send: (input: T) => Promise<unknown>) {
+/** `success` is what the MutationCache toasts when the write lands. */
+function useRoleWriter<T>(slug: string, success: string, send: (input: T) => Promise<unknown>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.volunteerRoles(slug) }),
   })
 }
 
 export function useAddVolunteerRole(slug: string) {
-  return useRoleWriter(slug, (name: string) => apiPost('/api/volunteer-roles', { slug, name }))
+  return useRoleWriter(slug, 'Role added', (name: string) =>
+    apiPost('/api/volunteer-roles', { slug, name }))
 }
 
 export function useSaveVolunteerRole(slug: string) {
-  return useRoleWriter(slug, ({ id, name }: { id: number; name: string }) =>
+  return useRoleWriter(slug, 'Role saved', ({ id, name }: { id: number; name: string }) =>
     apiPut(`/api/volunteer-roles/${id}?slug=${slug}`, { name }))
 }
 
 export function useDeleteVolunteerRole(slug: string) {
-  return useRoleWriter(slug, (id: number) => apiDel(`/api/volunteer-roles/${id}?slug=${slug}`))
+  return useRoleWriter(slug, 'Role deleted', (id: number) =>
+    apiDel(`/api/volunteer-roles/${id}?slug=${slug}`))
 }

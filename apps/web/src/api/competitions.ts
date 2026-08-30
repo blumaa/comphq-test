@@ -37,10 +37,12 @@ export function useMyCompetitions(enabled: boolean) {
 
 /** Both lists change together: creating a competition makes its creator that
     competition's admin, and deleting one takes that membership with it. */
-function useListWriter<T, R>(send: (input: T) => Promise<R>) {
+/** `success` is what the MutationCache toasts when the write lands. */
+function useListWriter<T, R>(success: string, send: (input: T) => Promise<R>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.competitions })
       qc.invalidateQueries({ queryKey: queryKeys.myCompetitions })
@@ -49,10 +51,10 @@ function useListWriter<T, R>(send: (input: T) => Promise<R>) {
 }
 
 export function useCreateCompetition() {
-  return useListWriter((input: { name: string; slug: string }) =>
+  return useListWriter('Competition created', (input: { name: string; slug: string }) =>
     apiPost<CompetitionSummary>('/api/competitions', input))
 }
 
 export function useDeleteCompetition() {
-  return useListWriter((id: number) => apiDel(`/api/competitions/${id}`))
+  return useListWriter('Competition deleted', (id: number) => apiDel(`/api/competitions/${id}`))
 }

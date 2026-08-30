@@ -369,12 +369,13 @@ describe('AthleteControlPage', () => {
     expect(within(await heatRow(1)).queryByText('Overlap')).not.toBeInTheDocument()
   })
 
-  // v1 subscribed to the heats and not to the checks: a tick made on another
-  // phone lands with the next three-second poll instead.
-  it('subscribes to the heats it draws', async () => {
+  // v1 subscribed to the heats and left checks to the three-second poll. The
+  // poll is now a 15s safety net, so a tick made on another phone has to
+  // arrive over the socket: both keys subscribe.
+  it('subscribes to the heats it draws and the checks it ticks', async () => {
     mount()
     await screen.findByRole('region', { name: 'Workout 1: Fran' })
-    expect(useRealtimeInvalidation).toHaveBeenCalledWith([['ops', 'summer']])
+    expect(useRealtimeInvalidation).toHaveBeenCalledWith([['ops', 'summer'], ['checks', 'summer']])
   })
 
   // The tick stays where the finger put it — that part is deliberate — but the

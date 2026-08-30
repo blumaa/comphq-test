@@ -64,6 +64,35 @@ describe('CompetitionAdminApp', () => {
       expect(currentPath()).toBe(`/login?callbackUrl=${encodeURIComponent('/summer/admin/people')}`))
   })
 
+  // A failed read is not an answer: showing "No access" over a network error
+  // tells a legitimate admin they lost their competition. This is how every
+  // API failure surfaced before the functions origin was reachable.
+  it('reports a failed access check instead of calling it no access', async () => {
+    serve({
+      '/api/me': { id: 'u1', email: USER.email, isSuper: false },
+      '/api/logo': { url: null },
+    })
+    mount()
+    expect(await screen.findByRole('heading', { name: /could not check access/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /no access/i })).not.toBeInTheDocument()
+  })
+
+  it('retries a failed access check and lets the admin through', async () => {
+    serve({
+      '/api/me': { id: 'u1', email: USER.email, isSuper: false },
+      '/api/logo': { url: null },
+    })
+    mount()
+    await screen.findByRole('heading', { name: /could not check access/i })
+    serve({
+      '/api/me': { id: 'u1', email: USER.email, isSuper: false },
+      '/api/competitions/mine': MINE,
+      '/api/logo': { url: null },
+    })
+    screen.getByRole('button', { name: /try again/i }).click()
+    expect(await screen.findByText('comp dashboard')).toBeInTheDocument()
+  })
+
   it('names the competition a signed-in stranger has no access to', async () => {
     serve({
       '/api/me': { id: 'u1', email: USER.email, isSuper: false },

@@ -8,6 +8,7 @@ import { isValidElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { RouteObject } from 'react-router'
 import { Pending } from './Pending'
+import { PublicApp } from './PublicApp'
 import { routes } from './routes'
 
 // The route table is complete before the pages are, so every path v1 serves
@@ -16,8 +17,11 @@ import { routes } from './routes'
 // PORTED, and the Phase 8 gate is that PENDING is empty.
 //
 // A route reaches its page either eagerly, through `element`, or on demand,
-// through `lazy` — the admin tree does the latter. Both are a page; neither is
-// a blank screen; so both count here.
+// through `lazy` — every page now does the latter. Both are a page; neither
+// is a blank screen; so both count here.
+//
+// hero/page.tsx is absent on purpose: /hero was removed by decision, and
+// routes.parity.test.ts's REMOVED map holds the reason.
 
 const V1_APP = fileURLToPath(new URL('../../../../../comphq/src/app', import.meta.url))
 
@@ -25,7 +29,6 @@ const PORTED: string[] = [
   'page.tsx',
   'login/page.tsx',
   'forgot-password/page.tsx',
-  'hero/page.tsx',
   'reset-password/page.tsx',
   'control/page.tsx',
   'ops/page.tsx',
@@ -81,10 +84,23 @@ describe('route table', () => {
     expect(new Set(pending.map((e) => e.page)).size).toBe(pending.length)
   })
 
-  // The Phase 8 gate, and it is met: every one of the 24 pages v1 serves is
-  // ported. A new placeholder puts this back in the red.
+  // The Phase 8 gate, and it is met: every page v1 serves is either ported
+  // (23) or removed by written decision (/hero, in the parity test's REMOVED
+  // map). A new placeholder puts this back in the red.
   it('has nothing left to port', () => {
-    expect(PORTED).toHaveLength(24)
+    expect(PORTED).toHaveLength(23)
     expect(pending).toEqual([])
+  })
+
+  // PublicApp and PublicShell each draw a ScreenContent — a <main> with the
+  // page gutter. With the :slug subtree nested under PublicApp, a spectator
+  // page rendered inside both: a doubled gutter and two main landmarks.
+  it('keeps the competition frames out of the public frame', () => {
+    const publicApp = routes[0].children!.find(
+      (r) => isValidElement(r.element) && r.element.type === PublicApp,
+    )!
+    const paths = (list: readonly RouteObject[]): string[] =>
+      list.flatMap((r) => [...(r.path ? [r.path] : []), ...paths(r.children ?? [])])
+    expect(paths(publicApp.children ?? [])).not.toContain(':slug')
   })
 })

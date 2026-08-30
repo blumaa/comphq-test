@@ -105,13 +105,13 @@ export function useRoster<T extends Row>({
     if (selected.length === 0) return
     setLoading(true)
     try {
-      await apiDel(`/api/${resource}`, { ids: selected.map(Number) })
+      await apiDel(`/api/${resource}`, { slug, ids: selected.map(Number) })
       setSelected([])
       await reload()
     } finally {
       setLoading(false)
     }
-  }, [reload, resource, selected, setLoading])
+  }, [reload, resource, selected, setLoading, slug])
 
   // The editor is open on the row being replaced, and after a swap that row is
   // somebody else — so the editor closes rather than redrawing under the hand.

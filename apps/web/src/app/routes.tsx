@@ -1,18 +1,7 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactElement } from 'react'
 import type { RouteObject } from 'react-router'
-import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage'
-import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { ResetPasswordPage } from '@/features/auth/pages/ResetPasswordPage'
 import { FirstCompetitionRedirect, SlugRedirect } from '@/features/competitions/pages/Redirects'
-import { WelcomePage } from '@/features/competitions/pages/WelcomePage'
-import { HeroPage } from '@/features/hero/pages/HeroPage'
-import { LeaderboardPage } from '@/features/leaderboard/pages/LeaderboardPage'
-import { AthleteControlPage } from '@/features/control/pages/AthleteControlPage'
-import { TvPage } from '@/features/tv/pages/TvPage'
-import { EquipmentPage } from '@/features/equipment/pages/EquipmentPage'
-import { JudgeSchedulePage } from '@/features/judges/pages/JudgeSchedulePage'
-import { AthleteOverviewPage } from '@/features/ops/pages/AthleteOverviewPage'
-import { SchedulePage } from '@/features/schedule/pages/SchedulePage'
+import { RouteError } from './RouteError'
 import { StyleguidePage } from '@/features/styleguide/pages/StyleguidePage'
 import { AdminApp } from './AdminApp'
 import { CompetitionPublicApp } from './CompetitionPublicApp'
@@ -36,74 +25,102 @@ import { RequireSession } from './RequireSession'
 // The table may now hold more than v1's 24 paths, but not silently: anything
 // added has to be named in routes.parity.test.ts's ADDED map with its reason.
 
-// The admin tree is the half of the app a spectator never opens, and it was
-// the larger half: with everything in one chunk the phone that scans a QR code
-// at the door downloaded eight admin screens to read a heat list. `lazy` is
-// react-router's own split, and it works here because the router is a data
-// router — the module is fetched while the route is matched, before anything
-// of the page renders, so there is no fallback to design and nothing flashes.
+// Every page is split into its own chunk: with everything in one bundle the
+// phone that scans a QR code at the door downloaded eight admin screens to
+// read a heat list. `lazy` is react-router's own split, and it works here
+// because the router is a data router — the module is fetched while the route
+// is matched, before anything of the page renders, so there is no fallback to
+// design and nothing flashes. Only the shells, gates and redirects stay
+// eager: they are a few lines each and every route needs one.
 //
 // The key is passed separately because the pages export a named component
-// rather than a default, and naming it keeps the module's own type.
-function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, key: K) {
-  return async () => ({ Component: (await load())[key] })
+// rather than a default, and naming it keeps the module's own type. `wrap`
+// lets a gated route keep its gates in this table, where the other gates
+// live, while the page behind them still loads on demand.
+function lazyPage<K extends string>(
+  load: () => Promise<Record<K, ComponentType>>,
+  key: K,
+  wrap: (page: ReactElement) => ReactElement = (page) => page,
+) {
+  return async () => {
+    const Page: ComponentType = (await load())[key]
+    return { Component: () => wrap(<Page />) }
+  }
 }
 
-export const routes: RouteObject[] = [
+// One pathless route wraps the whole table so its errorElement is the app's
+// floor: a render throw on any screen, a chunk a stale phone can no longer
+// fetch, or a URL nothing serves all land on RouteError rather than a white
+// page. Pathless, so it adds no segment and the parity test's view of the
+// table is unchanged.
+export const routes: RouteObject[] = [{
+  errorElement: <RouteError />,
+  children: routeTable(),
+}]
+
+function routeTable(): RouteObject[] {
+  return [
   {
     path: '/',
     element: <PublicApp />,
     children: [
-      { index: true, element: <WelcomePage /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
+      { index: true, lazy: lazyPage(() => import('@/features/competitions/pages/WelcomePage'), 'WelcomePage') },
+      { path: 'login', lazy: lazyPage(() => import('@/features/auth/pages/LoginPage'), 'LoginPage') },
+      { path: 'forgot-password', lazy: lazyPage(() => import('@/features/auth/pages/ForgotPasswordPage'), 'ForgotPasswordPage') },
+      { path: 'reset-password', lazy: lazyPage(() => import('@/features/auth/pages/ResetPasswordPage'), 'ResetPasswordPage') },
       // The two site-wide operator screens. v1 serves them both here and under
       // a slug, and the pages differ.
       { path: 'control', element: <FirstCompetitionRedirect page="control" /> },
       { path: 'ops', element: <FirstCompetitionRedirect page="athlete-overview" /> },
-      {
-        path: ':slug',
-        children: [
-          // The three spectator screens share the competition's chrome.
-          {
-            element: <CompetitionPublicApp />,
-            children: [
-              {
-                index: true,
-                element: (
-                  <RequireCompetition>
-                    <SchedulePage />
-                  </RequireCompetition>
-                ),
-              },
-              {
-                path: 'athlete-overview',
-                element: (
-                  <RequireCompetition>
-                    <AthleteOverviewPage />
-                  </RequireCompetition>
-                ),
-              },
-              // No RequireCompetition here: v1's leaderboard is the one [slug]
-              // page that never called resolveCompetition, so an unknown slug
-              // renders the empty board rather than a 404. That asymmetry is
-              // v1's own.
-              { path: 'leaderboard', element: <LeaderboardPage /> },
-            ],
-          },
+    ],
+  },
 
-          // A redirect draws nothing, so it takes no chrome on the way past.
-          { path: 'ops', element: <SlugRedirect page="athlete-overview" /> },
+  // Beside the public frame, not inside it: CompetitionPublicApp brings the
+  // competition's own chrome, and a frame inside PublicApp's frame drew two
+  // ScreenContents around every spectator page — a doubled page gutter and two
+  // main landmarks.
+  {
+    path: '/:slug',
+    children: [
+      // The three spectator screens share the competition's chrome.
+      {
+        element: <CompetitionPublicApp />,
+        children: [
+          {
+            index: true,
+            lazy: lazyPage(
+              () => import('@/features/schedule/pages/SchedulePage'),
+              'SchedulePage',
+              (page) => <RequireCompetition>{page}</RequireCompetition>,
+            ),
+          },
+          {
+            path: 'athlete-overview',
+            lazy: lazyPage(
+              () => import('@/features/ops/pages/AthleteOverviewPage'),
+              'AthleteOverviewPage',
+              (page) => <RequireCompetition>{page}</RequireCompetition>,
+            ),
+          },
+          // No RequireCompetition here: v1's leaderboard is the one [slug]
+          // page that never called resolveCompetition, so an unknown slug
+          // renders the empty board rather than a 404. That asymmetry is
+          // v1's own.
+          {
+            path: 'leaderboard',
+            lazy: lazyPage(() => import('@/features/leaderboard/pages/LeaderboardPage'), 'LeaderboardPage'),
+          },
         ],
       },
+
+      // A redirect draws nothing, so it takes no chrome on the way past.
+      { path: 'ops', element: <SlugRedirect page="athlete-overview" /> },
     ],
   },
 
   // Outside the public frame on purpose: the scoreboard owns the viewport and
-  // does not scroll, and the marketing scene draws its own full-bleed stage.
-  { path: '/:slug/TV', element: <TvPage /> },
-  { path: '/hero', element: <HeroPage /> },
+  // does not scroll.
+  { path: '/:slug/TV', lazy: lazyPage(() => import('@/features/tv/pages/TvPage'), 'TvPage') },
 
   // The station screens, for the same reason: each draws its own operator
   // frame — a context bar, the list, no navigation — and a frame inside the
@@ -113,28 +130,30 @@ export const routes: RouteObject[] = [
   // in v1's order: session first, competition second.
   {
     path: '/:slug/control',
-    element: (
-      <RequireSession>
-        <RequireCompetition>
-          <AthleteControlPage />
-        </RequireCompetition>
-      </RequireSession>
+    lazy: lazyPage(
+      () => import('@/features/control/pages/AthleteControlPage'),
+      'AthleteControlPage',
+      (page) => (
+        <RequireSession>
+          <RequireCompetition>{page}</RequireCompetition>
+        </RequireSession>
+      ),
     ),
   },
   {
     path: '/:slug/equipment',
-    element: (
-      <RequireCompetition>
-        <EquipmentPage />
-      </RequireCompetition>
+    lazy: lazyPage(
+      () => import('@/features/equipment/pages/EquipmentPage'),
+      'EquipmentPage',
+      (page) => <RequireCompetition>{page}</RequireCompetition>,
     ),
   },
   {
     path: '/:slug/judges',
-    element: (
-      <RequireCompetition>
-        <JudgeSchedulePage />
-      </RequireCompetition>
+    lazy: lazyPage(
+      () => import('@/features/judges/pages/JudgeSchedulePage'),
+      'JudgeSchedulePage',
+      (page) => <RequireCompetition>{page}</RequireCompetition>,
     ),
   },
 
@@ -196,4 +215,5 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-]
+  ]
+}

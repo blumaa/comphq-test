@@ -21,11 +21,11 @@
 //   5. No app stylesheet outside the brand file writes a raw colour or a raw
 //      length. Those are token references or they are drift. Two exceptions:
 //      a @media prelude, which is resolved before custom properties exist and
-//      so must carry one of the system's --mds-bp-* literals; and the hero's
-//      art file, which holds the marketing scene's palette and proportions —
-//      values measured off a photograph rather than taken from a scale. It may
-//      name them and may not apply them, so the sheets that draw with it stay
-//      under this rule.
+//      so must carry one of the system's --mds-bp-* literals; and an art
+//      file named in ART — a sheet holding a scene's own measured palette.
+//      It may name values and may not apply them, so the sheets that draw
+//      with it stay under this rule. The list is empty since the hero scene
+//      was removed; the mechanism stays for the next scene.
 //   6. Every --* an app stylesheet reads resolves to one something declares.
 //      A misspelt token fails nowhere: the declaration is dropped and the
 //      element keeps whatever it would have had, which is a layout nobody
@@ -44,9 +44,9 @@ const TEMPLATE = relative(root, require.resolve('@mond-design-system/tokens/bran
 const BRAND = 'apps/web/src/tokens/brand-comphq.css'
 const CSS_ROOTS = ['apps/web/src']
 
-// The art file, named here rather than matched by a suffix: an exemption
+// Art files, named here rather than matched by a suffix: an exemption
 // nobody can opt into by naming a file is an exemption that stays this size.
-const ART = ['apps/web/src/features/hero/hero-art.css']
+const ART = []
 
 // The system's own breakpoints, read from the package that defines them.
 // core/layout.css states the rule this check enforces: "a breakpoint is the
@@ -332,5 +332,5 @@ if (problems.length) {
 console.log(`tokens:   ${template.colour.length} re-declared, 0 geometry, ${contract.contrast.length} contrast pairs hold in both themes, 0 raw values`)
 console.log('          index.html pre-paints --mds-surface-page')
 console.log(`          @media may break at ${BREAKPOINTS.join(', ')}`)
-console.log(`          ${ART.length} art file names the hero's own values`)
+console.log(`          ${ART.length} art file(s) exempted`)
 console.log(`          ${knownProperties.size} custom properties declared, every var() reference resolves`)

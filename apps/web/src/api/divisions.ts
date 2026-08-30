@@ -17,11 +17,13 @@ export function useDivisions(slug: string) {
 }
 
 /** Deleting a division unassigns the athletes in it, and its order is the
-    order the heats run in, so a write here reaches past its own list. */
-function useDivisionWriter<T>(slug: string, send: (input: T) => Promise<unknown>) {
+    order the heats run in, so a write here reaches past its own list.
+    `success` is what the MutationCache toasts when the write lands. */
+function useDivisionWriter<T>(slug: string, success: string, send: (input: T) => Promise<unknown>) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: send,
+    meta: { success },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.divisions(slug) })
       qc.invalidateQueries({ queryKey: queryKeys.athletes(slug) })
@@ -31,12 +33,12 @@ function useDivisionWriter<T>(slug: string, send: (input: T) => Promise<unknown>
 }
 
 export function useAddDivision(slug: string) {
-  return useDivisionWriter(slug, (input: { name: string; order: number }) =>
+  return useDivisionWriter(slug, 'Division added', (input: { name: string; order: number }) =>
     apiPost('/api/divisions', { slug, ...input }))
 }
 
 export function useSaveDivision(slug: string) {
-  return useDivisionWriter(slug, ({ id, ...body }: { id: number; name: string; order: number }) =>
+  return useDivisionWriter(slug, 'Division saved', ({ id, ...body }: { id: number; name: string; order: number }) =>
     apiPut(`/api/divisions/${id}?slug=${slug}`, body))
 }
 
@@ -57,7 +59,7 @@ export function useSaveDivision(slug: string) {
  *  GET /api/divisions returns.
  */
 export function useReorderDivisions(slug: string) {
-  return useDivisionWriter(slug, ({ rows, from, to }: { rows: Division[]; from: number; to: number }) => {
+  return useDivisionWriter(slug, 'Divisions reordered', ({ rows, from, to }: { rows: Division[]; from: number; to: number }) => {
     const next = rows.slice()
     next.splice(to, 0, ...next.splice(from, 1))
     const writes = next
@@ -70,5 +72,5 @@ export function useReorderDivisions(slug: string) {
 }
 
 export function useDeleteDivision(slug: string) {
-  return useDivisionWriter(slug, (id: number) => apiDel(`/api/divisions/${id}?slug=${slug}`))
+  return useDivisionWriter(slug, 'Division deleted', (id: number) => apiDel(`/api/divisions/${id}?slug=${slug}`))
 }

@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router'
 import { useMyCompetitions } from '@/api/competitions'
-import { ComphqWordmark } from '@/components/ComphqWordmark/ComphqWordmark'
+import { CompetitionBrand } from '@/components/CompetitionBrand/CompetitionBrand'
 import { useMe } from '@/api/session'
 import { useSession } from '@/lib/session'
 import { AdminShell } from '@/layouts/AdminShell'
-import { Booting, NoAccess } from './GateStates'
+import { Booting, GateFailed, NoAccess } from './GateStates'
 import { loginPath } from './loginPath'
 
 // The site dashboard, super-admin only. A competition admin goes straight to
@@ -34,7 +34,8 @@ export function AdminApp() {
 
   // v1 read isSuper off a 200 body and let every other outcome — a 401, a
   // network failure — fall through to the non-super branch. Settled-but-failed
-  // is therefore not 'loading'; only genuinely-still-waiting is.
+  // is not 'loading' — but it is not 'non-super' either: a failed read is no
+  // answer, and 'non-super' redirects or refuses on the strength of it.
   const waiting = me.isPending || competitions.isPending
 
   const status = loading || (user && waiting)
@@ -43,7 +44,9 @@ export function AdminApp() {
       ? 'unauthenticated'
       : me.data?.isSuper
         ? 'super'
-        : 'non-super'
+        : me.error || competitions.error
+          ? 'error'
+          : 'non-super'
 
   const accessibleSlug = competitions.data?.[0]?.slug ?? null
 
@@ -60,6 +63,15 @@ export function AdminApp() {
 
   if (status === 'loading' || status === 'unauthenticated') return <Booting label="Checking access" />
 
+  if (status === 'error') {
+    return (
+      <GateFailed
+        onRetry={() => { void me.refetch(); void competitions.refetch() }}
+        onSignOut={handleSignOut}
+      />
+    )
+  }
+
   if (status === 'non-super') {
     if (accessibleSlug) return <Booting label="Checking access" />
     return (
@@ -72,7 +84,7 @@ export function AdminApp() {
 
   return (
     <AdminShell
-      title={<ComphqWordmark size="inline" />}
+      title={<CompetitionBrand href="/admin" />}
       groups={[
         {
           label: 'Site',

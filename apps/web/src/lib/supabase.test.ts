@@ -8,6 +8,7 @@ async function load(env: Record<string, string | undefined>) {
   vi.stubEnv('VITE_SUPABASE_URL', env.VITE_SUPABASE_URL ?? '')
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', env.VITE_SUPABASE_ANON_KEY ?? '')
   vi.stubEnv('VITE_FUNCTIONS_URL', env.VITE_FUNCTIONS_URL ?? '')
+  vi.stubEnv('VITE_FUNCTIONS_REGION', env.VITE_FUNCTIONS_REGION ?? '')
   return import('./supabase')
 }
 
@@ -79,5 +80,18 @@ describe('getSupabaseEnv', () => {
     const env = getSupabaseEnv()
     expect(env.functionsUrl).toBe('http://localhost:54321')
     expect(env.url).toBe(ENV.VITE_SUPABASE_URL)
+  })
+
+  // Functions run in whatever region the gateway picks unless told otherwise,
+  // and the database lives in exactly one. The variable names the database's
+  // region so every invocation runs next to its data.
+  it('carries VITE_FUNCTIONS_REGION when set', async () => {
+    const { getSupabaseEnv } = await load({ ...ENV, VITE_FUNCTIONS_REGION: 'us-west-2' })
+    expect(getSupabaseEnv().functionsRegion).toBe('us-west-2')
+  })
+
+  it('leaves the region unset by default, as local serving has no regions', async () => {
+    const { getSupabaseEnv } = await load(ENV)
+    expect(getSupabaseEnv().functionsRegion).toBeUndefined()
   })
 })

@@ -1,5 +1,5 @@
-/* The width and height attributes hold the box, as they do on the hero's
-   image; this only keeps the mark's own proportions inside it. */
+/* The width and height attributes hold the box; this only keeps the mark's
+   own proportions inside it. */
 
 .logo {
   object-fit: contain;

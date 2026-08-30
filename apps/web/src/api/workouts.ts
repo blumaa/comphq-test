@@ -48,6 +48,7 @@ export function useCreateWorkout(slug: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (draft: WorkoutDraft) => apiPost<Workout>('/api/workouts', { slug, ...draft }),
+    meta: { success: 'Workout created' },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workouts(slug) })
       // A workout is a column on the public schedule before it has a heat in
