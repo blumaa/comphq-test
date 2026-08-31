@@ -11,6 +11,7 @@ supabase/.temp/
 .backups/
 
 # Local tool state
+*.tsbuildinfo
 .DS_Store
 .playwright-mcp/
 .claude/
