@@ -79,7 +79,8 @@ describe('what the screen says it holds', () => {
 describe('the two tabs', () => {
   it('opens on the athletes, and hands them what it read', async () => {
     mount()
-    expect(await screen.findByTestId('athletes-tab')).toHaveTextContent('2 rows, 1 divisions')
+    await waitFor(() =>
+      expect(screen.getByTestId('athletes-tab')).toHaveTextContent('2 rows, 1 divisions'))
     expect(screen.queryByTestId('volunteers-tab')).not.toBeInTheDocument()
   })
 
@@ -97,7 +98,7 @@ describe('adding to whichever roster is open', () => {
   it('names the tab it is pointed at', async () => {
     mount()
     expect(await screen.findByRole('button', { name: 'Add athlete' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Volunteers (1)' }))
+    fireEvent.click(await screen.findByRole('tab', { name: 'Volunteers (1)' }))
     expect(await screen.findByRole('button', { name: 'Add volunteer' })).toBeInTheDocument()
   })
 
@@ -112,7 +113,7 @@ describe('adding to whichever roster is open', () => {
   it('closes the editor when the other roster is asked for', async () => {
     mount()
     fireEvent.click(await screen.findByRole('button', { name: 'Add athlete' }))
-    fireEvent.click(screen.getByRole('tab', { name: 'Volunteers (1)' }))
+    fireEvent.click(await screen.findByRole('tab', { name: 'Volunteers (1)' }))
     expect(await screen.findByTestId('volunteers-tab')).not.toHaveTextContent('adding')
   })
 })

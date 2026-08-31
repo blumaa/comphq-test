@@ -17,11 +17,14 @@ export const queryKeys = {
   schedule: (slug: string) => ['schedule', slug] as const,
   checks: (slug: string) => ['checks', slug] as const,
   judgeSchedule: (slug: string) => ['judge-schedule', slug] as const,
+  judgeAssignments: (slug: string, workoutId: string) =>
+    ['judge-assignments', slug, workoutId] as const,
   workoutEquipment: (slug: string, workoutId: number) =>
     ['workout-equipment', slug, workoutId] as const,
   // The two rosters the admin screens read and write. Every mutation that
   // touches one names the key here rather than spelling the array again.
   athletes: (slug: string) => ['athletes', slug] as const,
+  volunteers: (slug: string) => ['volunteers', slug] as const,
   // Written on the setup screen, read by the roster, the equipment scope and
   // the heat running order.
   divisions: (slug: string) => ['divisions', slug] as const,

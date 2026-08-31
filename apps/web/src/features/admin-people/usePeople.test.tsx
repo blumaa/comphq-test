@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { HttpError } from '@/lib/http'
 import { usePeople } from './usePeople'
 
@@ -7,7 +9,9 @@ const { apiGet } = vi.hoisted(() => ({ apiGet: vi.fn() }))
 vi.mock('@/lib/api', () => ({ apiGet }))
 
 // v1: the top half of src/app/[slug]/admin/people/page.tsx — the four reads the
-// screen opens with and the one labelled banner every failure lands in.
+// screen opens with and the one labelled banner every failure lands in. The
+// reads go through the shared queries now, so the hook renders inside a query
+// client of its own per test.
 
 const ATHLETES = [{ id: 1, name: 'Ann', bibNumber: '7', divisionId: 3, division: null, withdrawn: false }]
 const DIVISIONS = [{ id: 3, name: 'Rx', order: 1 }]
@@ -24,8 +28,16 @@ function serve() {
   })
 }
 
+function mount() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return renderHook(() => usePeople('rugged-rumble'), { wrapper })
+}
+
 async function open() {
-  const hook = renderHook(() => usePeople('rugged-rumble'))
+  const hook = mount()
   await waitFor(() => expect(hook.result.current.athletes).toHaveLength(1))
   return hook
 }
@@ -38,11 +50,11 @@ beforeEach(() => {
 describe('opening the screen', () => {
   it('asks for both rosters and the lists that classify them', async () => {
     await open()
-    expect(apiGet.mock.calls.map((c) => c[0])).toEqual([
+    expect(apiGet.mock.calls.map((c) => c[0]).sort()).toEqual([
       '/api/athletes?slug=rugged-rumble',
       '/api/divisions?slug=rugged-rumble',
-      '/api/volunteers?slug=rugged-rumble',
       '/api/volunteer-roles?slug=rugged-rumble',
+      '/api/volunteers?slug=rugged-rumble',
     ])
   })
 
@@ -59,7 +71,7 @@ describe('opening the screen', () => {
   it('says it is loading while the four reads are out', async () => {
     const resolvers: Array<(rows: unknown[]) => void> = []
     apiGet.mockImplementation(() => new Promise((resolve) => { resolvers.push(resolve) }))
-    const { result } = renderHook(() => usePeople('rugged-rumble'))
+    const { result } = mount()
     await waitFor(() => expect(result.current.loading).toBe(true))
     act(() => resolvers.forEach((resolve) => resolve([])))
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -67,7 +79,7 @@ describe('opening the screen', () => {
 
   it('says which step failed, and lets the banner be dismissed', async () => {
     apiGet.mockRejectedValue(new HttpError(500, 'Database is away'))
-    const { result } = renderHook(() => usePeople('rugged-rumble'))
+    const { result } = mount()
     await waitFor(() => expect(result.current.error).toBe('Load: Database is away'))
     act(() => result.current.setError(null))
     expect(result.current.error).toBeNull()
@@ -106,6 +118,6 @@ describe('re-reading after a write', () => {
   it('lets a caller drop one row without a round trip', async () => {
     const { result } = await open()
     act(() => result.current.setAthletes((prev) => prev.filter((a) => a.id !== 1)))
-    expect(result.current.athletes).toEqual([])
+    await waitFor(() => expect(result.current.athletes).toEqual([]))
   })
 })
