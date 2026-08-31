@@ -283,13 +283,17 @@ export function AthletesTab({
           </>
         }
         extra={editing && (
-          <Button
-            variant="secondary"
-            disabled={loading}
-            onClick={() => withdraw(editing)}
-          >
-            {editing.withdrawn ? 'Un-withdraw' : 'Withdraw'}
-          </Button>
+          /* The sheet's stack stretches its children; a button is not a
+             field, so this row keeps it at its own size. */
+          <Inline>
+            <Button
+              variant="secondary"
+              disabled={loading}
+              onClick={() => withdraw(editing)}
+            >
+              {editing.withdrawn ? 'Un-withdraw' : 'Withdraw'}
+            </Button>
+          </Inline>
         )}
       />
 

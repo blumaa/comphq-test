@@ -141,6 +141,7 @@ export function VolunteersTab({
           <Inline gap="base" wrap className={styles.filters}>
             <Input
               type="search"
+              size="sm"
               aria-label="Search volunteers by name"
               placeholder="Search by name…"
               value={roster.search}
@@ -148,7 +149,7 @@ export function VolunteersTab({
               className={styles.grow}
             />
             {roles.length > 0 && (
-              <Select aria-label="Filter by role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <Select size="sm" aria-label="Filter by role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
                 <option value="">All roles</option>
                 {roles.map((r) => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
                 <option value={NO_ROLE}>No role</option>

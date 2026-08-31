@@ -1,3 +1,9 @@
+/* Divisions come in any number, and the pill row does not wrap or shrink —
+   so on a phone it scrolls sideways rather than pushing the page wide. */
+.divisionScroll {
+  overflow-x: auto;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

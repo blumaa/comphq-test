@@ -123,6 +123,7 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
     <>
       <Button
         ref={triggerRef}
+        size="sm"
         variant="secondary"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -181,14 +182,16 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
             <Stack gap="tight">
               {error && <Text variant="meta" tone="danger">{error}</Text>}
               <Input
+                size="sm"
                 aria-label="Equipment item"
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
                 placeholder="e.g. Barbell, 20kg plates…"
               />
-              <Inline gap="tight">
+              <Inline gap="tight" wrap>
                 {divisions.length > 0 && (
                   <Select
+                    size="sm"
                     aria-label="Division"
                     value={newDivisionId}
                     onChange={(e) => setNewDivisionId(e.target.value)}
@@ -200,7 +203,7 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
                     ))}
                   </Select>
                 )}
-                <Button type="submit" disabled={loading || !newItem.trim()}>Add</Button>
+                <Button type="submit" size="sm" disabled={loading || !newItem.trim()}>Add</Button>
               </Inline>
             </Stack>
           </form>

@@ -225,15 +225,17 @@ export function LeaderboardPage() {
       {!isPending && workouts.length > 0 && (
         <Stack gap="base">
           {divisions.length > 1 && (
-            <SegmentedControl
-              label="Division"
-              value={divisionFilter}
-              onChange={setDivisionFilter}
-              options={[
-                { value: ALL_DIVISIONS, label: 'All' },
-                ...divisions.map((d) => ({ value: d ?? NULL_DIVISION, label: d ?? 'No Division' })),
-              ]}
-            />
+            <div className={styles.divisionScroll}>
+              <SegmentedControl
+                label="Division"
+                value={divisionFilter}
+                onChange={setDivisionFilter}
+                options={[
+                  { value: ALL_DIVISIONS, label: 'All' },
+                  ...divisions.map((d) => ({ value: d ?? NULL_DIVISION, label: d ?? 'No Division' })),
+                ]}
+              />
+            </div>
           )}
 
           <div className={styles.filters}>

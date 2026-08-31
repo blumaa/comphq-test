@@ -73,6 +73,7 @@ export function TvLeaderboardSection({
         <Inline gap="hairline" align="center">
           <Input
             type="number"
+            size="sm"
             min={0}
             max={100}
             aria-label={`Percent of ${d.name} shown`}

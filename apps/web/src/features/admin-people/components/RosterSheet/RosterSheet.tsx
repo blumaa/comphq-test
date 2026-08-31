@@ -2,6 +2,7 @@ import {
   Button,
   Divider,
   Field,
+  Inline,
   SegmentedControl,
   Select,
   Sheet,
@@ -101,6 +102,7 @@ export function RosterSheet<T extends Row>({
               options={MODES}
               value={mode}
               onChange={setMode}
+              fullWidth
             />
           )}
 
@@ -128,13 +130,17 @@ export function RosterSheet<T extends Row>({
               <Text variant="meta" tone="muted" className={styles.note}>
                 The replacement takes over every heat and lane this {noun} was in.
               </Text>
-              <Button
-                variant="secondary"
-                disabled={busy || !roster.swapToId}
-                onClick={() => void roster.swap(editing.id)}
-              >
-                Replace
-              </Button>
+              {/* The stack stretches its children; a button is not a field,
+                  so this row keeps it at its own size. */}
+              <Inline>
+                <Button
+                  variant="secondary"
+                  disabled={busy || !roster.swapToId}
+                  onClick={() => void roster.swap(editing.id)}
+                >
+                  Replace
+                </Button>
+              </Inline>
             </Stack>
           )}
         </Stack>

@@ -46,8 +46,8 @@ export function OperatorShell({
       <SkipLink />
 
       <header className={styles.context}>
-        <Inline gap="tight" align="center" justify="between">
-          <Inline gap="tight" align="center">
+        <Inline gap="tight" align="center" justify="between" wrap>
+          <Inline gap="tight" align="center" wrap>
             {back && (
               <Button
                 variant="ghost"
@@ -61,7 +61,7 @@ export function OperatorShell({
             )}
             <Heading level={1} variant="subtitle">{title}</Heading>
           </Inline>
-          {context && <Inline gap="tight" align="center">{context}</Inline>}
+          {context && <Inline gap="tight" align="center" wrap>{context}</Inline>}
         </Inline>
       </header>
 

@@ -290,13 +290,13 @@ export function WorkoutDetailPage() {
       wide
       actions={
         <>
-          <Button variant="secondary" onClick={() => setEditing(true)}>Edit Settings</Button>
+          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>Edit Settings</Button>
           <WorkoutEquipmentPopover workoutId={id} slug={slug} />
-          {workout.status === 'draft' && <Button disabled={detail.loading} onClick={() => detail.setStatus('active')}>Activate</Button>}
-          {workout.status === 'active' && <Button variant="secondary" disabled={detail.loading} onClick={() => detail.setStatus('draft')}>Deactivate</Button>}
-          {workout.status === 'completed' && <Button disabled={detail.loading} onClick={() => detail.setStatus('active')}>Reactivate</Button>}
-          {workout.status !== 'draft' && <Button variant="warning" onClick={() => setPrompt('reset')}>Reset</Button>}
-          <Button variant="danger" onClick={() => setPrompt('delete')}>Delete</Button>
+          {workout.status === 'draft' && <Button size="sm" disabled={detail.loading} onClick={() => detail.setStatus('active')}>Activate</Button>}
+          {workout.status === 'active' && <Button size="sm" variant="secondary" disabled={detail.loading} onClick={() => detail.setStatus('draft')}>Deactivate</Button>}
+          {workout.status === 'completed' && <Button size="sm" disabled={detail.loading} onClick={() => detail.setStatus('active')}>Reactivate</Button>}
+          {workout.status !== 'draft' && <Button size="sm" variant="warning" onClick={() => setPrompt('reset')}>Reset</Button>}
+          <Button size="sm" variant="danger" onClick={() => setPrompt('delete')}>Delete</Button>
         </>
       }
     >
