@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { HttpError } from '@/lib/http'
 import { useWorkoutJudges } from './useWorkoutJudges'
 
@@ -32,9 +34,18 @@ function answer() {
   })
 }
 
+function mount() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return renderHook(() => useWorkoutJudges('42', 'rugged-rumble'), { wrapper })
+}
+
 async function loaded() {
-  const hook = renderHook(() => useWorkoutJudges('42', 'rugged-rumble'))
+  const hook = mount()
   await waitFor(() => expect(hook.result.current.assignments).toHaveLength(2))
+  await waitFor(() => expect(hook.result.current.volunteers).toHaveLength(3))
   return hook
 }
 
@@ -48,10 +59,10 @@ beforeEach(() => {
 describe('what the screen knows about judges', () => {
   it('reads the assignments, the roles and the volunteers', async () => {
     await loaded()
-    expect(apiGet.mock.calls.map((c) => c[0])).toEqual([
-      '/api/workouts/42/judge-assignments?slug=rugged-rumble',
+    expect(apiGet.mock.calls.map((c) => c[0]).sort()).toEqual([
       '/api/volunteer-roles?slug=rugged-rumble',
       '/api/volunteers?slug=rugged-rumble',
+      '/api/workouts/42/judge-assignments?slug=rugged-rumble',
     ])
   })
 
@@ -75,7 +86,7 @@ describe('what the screen knows about judges', () => {
   // v1 called this read non-critical: the rest of the screen works without it.
   it('says nothing when the read fails', async () => {
     apiGet.mockRejectedValue(new HttpError(500, 'boom'))
-    const { result } = renderHook(() => useWorkoutJudges('42', 'rugged-rumble'))
+    const { result } = mount()
     await waitFor(() => expect(apiGet).toHaveBeenCalled())
     expect(result.current.error).toBeNull()
     expect(result.current.assignments).toEqual([])
@@ -85,6 +96,7 @@ describe('what the screen knows about judges', () => {
 describe('putting a judge in a lane', () => {
   it('posts the volunteer, the heat and the lane, and reads nothing back', async () => {
     const { result } = await loaded()
+    apiGet.mockClear()
     await act(() => result.current.setJudge(3, 2, 3))
     expect(apiPost).toHaveBeenCalledWith(
       '/api/workouts/42/judge-assignments?slug=rugged-rumble',
@@ -92,7 +104,7 @@ describe('putting a judge in a lane', () => {
     )
     // The row is built here from what is already known; the three reads of
     // the initial load are not repeated per lane pick.
-    expect(apiGet).toHaveBeenCalledTimes(3)
+    expect(apiGet).not.toHaveBeenCalled()
   })
 
   it('names the judge in the lane before the server answers', async () => {
@@ -155,9 +167,9 @@ describe('putting a judge in a lane', () => {
   it('clears a previous failure when asked again', async () => {
     apiPost.mockRejectedValueOnce(new HttpError(409, 'Judge is busy that heat'))
     const { result } = await loaded()
-    await act(() => result.current.setJudge(3, 2, 7))
+    await act(() => result.current.setJudge(3, 2, 3))
     await waitFor(() => expect(result.current.error).not.toBeNull())
-    await act(() => result.current.setJudge(3, 2, 8))
+    await act(() => result.current.setJudge(3, 2, 1))
     await waitFor(() => expect(result.current.error).toBeNull())
   })
 })
