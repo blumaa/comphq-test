@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { HttpError } from '@/lib/http'
+import { queryKeys } from '@/api/queryKeys'
 import { buildWorkoutMutations } from './useWorkoutDetail.mutations'
 import { computeAssignmentUpdates, getAffectedHeats } from '@/lib/heat-reorder'
 
@@ -41,65 +42,156 @@ function errorMessage(e: unknown): string {
   return 'Unknown error'
 }
 
+// The workout is a query keyed per slug and id; every write below invalidates
+// that key and stays pending until the re-read lands, which is what the old
+// hand-rolled `await load()` in each write gave the loading flag. The HTTP
+// surface stays in buildWorkoutMutations, where it is unit-tested alone.
 export function useWorkoutDetail(workoutId: string, opts: Options) {
-  const [workout, setWorkout] = useState<Workout | null>(null)
-  const [loading, setLoading] = useState(false)
+  const qc = useQueryClient()
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
   const [savingHeats, setSavingHeats] = useState<Set<number>>(() => new Set())
 
   const { slug } = opts
   const api = useMemo(() => buildWorkoutMutations(workoutId, slug), [workoutId, slug])
+  const key = queryKeys.workout(slug, workoutId)
 
   const optsRef = useRef(opts)
   useEffect(() => { optsRef.current = opts }, [opts])
+
+  const workoutQuery = useQuery({
+    queryKey: key,
+    queryFn: () => api.load<Workout>(),
+    enabled: !!slug && !!workoutId,
+    // v1 read once and reported. A 404 must bounce the admin to the list at
+    // once, not after a retry of a workout that is gone.
+    retry: false,
+  })
+  const workout = workoutQuery.data ?? null
+
+  const readError = workoutQuery.error
+  useEffect(() => {
+    if (!readError) return
+    // Only a real 404 means the workout is gone. A transient failure used to
+    // take this same exit and silently bounce the admin to the list.
+    if (readError instanceof HttpError && readError.status === 404) optsRef.current.onNotFound()
+    else setError(errorMessage(readError))
+  }, [readError])
+
+  const load = useCallback(
+    () => qc.invalidateQueries({ queryKey: queryKeys.workout(slug, workoutId) }),
+    [qc, slug, workoutId])
 
   const onSuccess = useCallback((m: string) => {
     setMsg(m); setError('')
     optsRef.current.onSuccess?.(m)
   }, [])
 
-  const load = useCallback(async () => {
-    try {
-      const data = await api.load<Workout>()
-      setWorkout(data)
-      return data
-    } catch (e) {
-      // Only a real 404 means the workout is gone. A transient failure used to
-      // take this same exit and silently bounce the admin to the list.
-      if (e instanceof HttpError && e.status === 404) optsRef.current.onNotFound()
-      else setError(errorMessage(e))
-    }
-  }, [api])
+  // Every mutation carries its own onError, which besides filling the banner
+  // is what tells the global MutationCache not to toast the failure too.
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => api.setStatus(status),
+    onMutate: () => setError(''),
+    onSuccess: () => load(),
+    onError: (e) => setError(errorMessage(e)),
+  })
 
-  useEffect(() => { void load() }, [load])
+  const generateAssignmentsMutation = useMutation({
+    mutationFn: (useCumulative: boolean) => api.generateAssignments(useCumulative),
+    onMutate: () => { setMsg(''); setError('') },
+    onSuccess: async () => { await load(); onSuccess('Heat assignments generated.') },
+    onError: (e) => setError(errorMessage(e)),
+  })
 
-  const setStatus = useCallback(async (status: string) => {
-    setLoading(true); setError('')
-    try { await api.setStatus(status); await load() }
-    catch (e) { setError(errorMessage(e)) }
-    finally { setLoading(false) }
-  }, [api, load])
+  const saveHeatTimeMutation = useMutation({
+    mutationFn: ({ heatNumber, isoTime }: { heatNumber: number; isoTime: string }) =>
+      api.saveHeatTime(heatNumber, isoTime),
+    onMutate: () => setError(''),
+    onSuccess: () => load(),
+    onError: (e) => setError(errorMessage(e)),
+  })
 
-  const generateAssignments = useCallback(async (useCumulative: boolean) => {
-    setLoading(true); setMsg(''); setError('')
-    try {
-      await api.generateAssignments(useCumulative)
+  const saveManyMutation = useMutation({
+    mutationFn: ({ payloads }: { payloads: ScorePayload[]; successMsg: string }) =>
+      api.saveAll(payloads),
+    onMutate: () => setError(''),
+    onSuccess: async (_data, { successMsg }) => { await load(); onSuccess(successMsg) },
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  const completeHeatMutation = useMutation({
+    // The saves and the completion are one act: if any save fails, the heat
+    // must not close over a half-written set of scores.
+    mutationFn: async ({ heatNumber, payloads }: { heatNumber: number; payloads: ScorePayload[] }) => {
+      await api.saveAll(payloads)
+      await api.completeHeat(heatNumber)
+    },
+    onMutate: () => setError(''),
+    onSuccess: async (_data, { heatNumber }) => {
+      onSuccess(`Heat ${heatNumber} completed. Rankings updated.`)
       await load()
-      onSuccess('Heat assignments generated.')
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+    },
+    onError: (e) => setError(errorMessage(e)),
+  })
 
-  const saveHeatTime = useCallback(async (heatNumber: number, isoTime: string) => {
-    setLoading(true); setError('')
-    try { await api.saveHeatTime(heatNumber, isoTime); await load() }
-    catch (e) { setError(errorMessage(e)) }
-    finally { setLoading(false) }
-  }, [api, load])
+  const undoHeatMutation = useMutation({
+    mutationFn: (heatNumber: number) => api.undoHeat(heatNumber),
+    onMutate: () => setError(''),
+    onSuccess: async (_data, heatNumber) => {
+      onSuccess(`Heat ${heatNumber} reopened.`)
+      await load()
+    },
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  const calculateMutation = useMutation({
+    // Saves first; if any fail, we bail BEFORE calculating. This is the
+    // whole point of the refactor — a partial save used to leave the
+    // workout half-ranked with silent errors in the console.
+    mutationFn: async (payloads: ScorePayload[]) => {
+      await api.saveAll(payloads)
+      await api.calculate()
+    },
+    onMutate: () => setError(''),
+    onSuccess: async () => {
+      onSuccess('Rankings calculated. Workout marked as completed.')
+      await load()
+    },
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  // clearScores, resetWorkout and deleteWorkout run behind a ConfirmDialog,
+  // whose contract needs the real rejection: a swallowed error resolves, and a
+  // resolved action is indistinguishable from a write that landed. The error
+  // state is still set for the banner behind the prompt.
+  const clearScoresMutation = useMutation({
+    mutationFn: () => api.clearScores(),
+    onMutate: () => setError(''),
+    onSuccess: async () => { onSuccess('All scores cleared.'); await load() },
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  const resetWorkoutMutation = useMutation({
+    mutationFn: () => api.resetWorkout(),
+    onMutate: () => setError(''),
+    onSuccess: async () => {
+      onSuccess('Workout reset. All scores cleared and heats reopened.')
+      await load()
+    },
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  const deleteWorkoutMutation = useMutation({
+    mutationFn: () => api.deleteWorkout(),
+    onError: (e) => setError(errorMessage(e)),
+  })
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (patch: Record<string, unknown>) => api.updateSettings(patch),
+    onMutate: () => setError(''),
+    onSuccess: async () => { onSuccess('Settings saved.'); await load() },
+    onError: (e) => setError(errorMessage(e)),
+  })
 
   // Reorder runs through TanStack useMutation so we can track per-heat
   // "saving" state via onMutate/onSettled. onSuccess consumes the server's
@@ -121,7 +213,8 @@ export function useWorkoutDetail(workoutId: string, opts: Options) {
       setSavingHeats(new Set(getAffectedHeats(workout.assignments, vars.dragId, vars.destHeat)))
     },
     onSuccess: (freshAssignments) => {
-      setWorkout((prev) => (prev ? { ...prev, assignments: freshAssignments } : prev))
+      qc.setQueryData<Workout>(key, (prev) =>
+        prev ? { ...prev, assignments: freshAssignments } : prev)
     },
     onError: (e) => {
       setError(`Reorder failed: ${errorMessage(e)}`)
@@ -138,114 +231,66 @@ export function useWorkoutDetail(workoutId: string, opts: Options) {
     reorderMutation.mutate({ dragId, destHeat, destIndex })
   }, [workout, reorderMutation])
 
-  const saveMany = useCallback(async (payloads: ScorePayload[], successMsg: string) => {
-    setLoading(true); setError('')
-    try {
-      await api.saveAll(payloads)
-      await load()
-      onSuccess(successMsg)
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  // The wrappers keep the hook's old signatures. The ones without a dialog
+  // spend the rejection — onError has already put it in the banner — and the
+  // three behind a ConfirmDialog let it travel.
+  const { mutateAsync: setStatusAsync } = statusMutation
+  const setStatus = useCallback(
+    (status: string) => setStatusAsync(status).then(() => undefined, () => undefined), [setStatusAsync])
 
-  const completeHeat = useCallback(async (heatNumber: number, payloads: ScorePayload[]) => {
-    setLoading(true); setError('')
-    try {
-      await api.saveAll(payloads)
-      await api.completeHeat(heatNumber)
-      onSuccess(`Heat ${heatNumber} completed. Rankings updated.`)
-      await load()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: generateAsync } = generateAssignmentsMutation
+  const generateAssignments = useCallback(
+    (useCumulative: boolean) => generateAsync(useCumulative).then(() => undefined, () => undefined), [generateAsync])
 
-  const undoHeat = useCallback(async (heatNumber: number) => {
-    setLoading(true); setError('')
-    try {
-      await api.undoHeat(heatNumber)
-      onSuccess(`Heat ${heatNumber} reopened.`)
-      await load()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: saveHeatTimeAsync } = saveHeatTimeMutation
+  const saveHeatTime = useCallback(
+    (heatNumber: number, isoTime: string) =>
+      saveHeatTimeAsync({ heatNumber, isoTime }).then(() => undefined, () => undefined), [saveHeatTimeAsync])
 
-  // clearScores, resetWorkout and deleteWorkout run behind a ConfirmDialog,
-  // whose contract needs the real rejection: a swallowed error resolves, and a
-  // resolved action is indistinguishable from a write that landed. The error
-  // state is still set for the banner behind the prompt.
-  const clearScores = useCallback(async () => {
-    setLoading(true); setError('')
-    try {
-      await api.clearScores()
-      onSuccess('All scores cleared.')
-      await load()
-    } catch (e) {
-      setError(errorMessage(e))
-      throw e
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: saveManyAsync } = saveManyMutation
+  const saveMany = useCallback(
+    (payloads: ScorePayload[], successMsg: string) =>
+      saveManyAsync({ payloads, successMsg }).then(() => undefined, () => undefined), [saveManyAsync])
 
-  const resetWorkout = useCallback(async () => {
-    setLoading(true); setError('')
-    try {
-      await api.resetWorkout()
-      onSuccess('Workout reset. All scores cleared and heats reopened.')
-      await load()
-    } catch (e) {
-      setError(errorMessage(e))
-      throw e
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: completeHeatAsync } = completeHeatMutation
+  const completeHeat = useCallback(
+    (heatNumber: number, payloads: ScorePayload[]) =>
+      completeHeatAsync({ heatNumber, payloads }).then(() => undefined, () => undefined), [completeHeatAsync])
 
-  const calculateRankings = useCallback(async (payloads: ScorePayload[]) => {
-    setLoading(true); setError('')
-    try {
-      // Saves first; if any fail, we bail BEFORE calculating. This is the
-      // whole point of the refactor — a partial save used to leave the
-      // workout half-ranked with silent errors in the console.
-      await api.saveAll(payloads)
-      await api.calculate()
-      onSuccess('Rankings calculated. Workout marked as completed.')
-      await load()
-    } catch (e) {
-      setError(errorMessage(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: undoHeatAsync } = undoHeatMutation
+  const undoHeat = useCallback(
+    (heatNumber: number) => undoHeatAsync(heatNumber).then(() => undefined, () => undefined), [undoHeatAsync])
 
-  const deleteWorkout = useCallback(async () => {
-    try { await api.deleteWorkout() }
-    catch (e) { setError(errorMessage(e)); throw e }
-  }, [api])
+  const { mutateAsync: calculateAsync } = calculateMutation
+  const calculateRankings = useCallback(
+    (payloads: ScorePayload[]) => calculateAsync(payloads).then(() => undefined, () => undefined), [calculateAsync])
 
-  const updateSettings = useCallback(async (patch: Record<string, unknown>) => {
-    setLoading(true); setError('')
-    try {
-      await api.updateSettings(patch)
-      onSuccess('Settings saved.')
-      await load()
-      return true
-    } catch (e) {
-      setError(errorMessage(e))
-      return false
-    } finally {
-      setLoading(false)
-    }
-  }, [api, load, onSuccess])
+  const { mutateAsync: clearScoresAsync } = clearScoresMutation
+  const clearScores = useCallback(
+    () => clearScoresAsync().then(() => undefined), [clearScoresAsync])
+
+  const { mutateAsync: resetWorkoutAsync } = resetWorkoutMutation
+  const resetWorkout = useCallback(
+    () => resetWorkoutAsync().then(() => undefined), [resetWorkoutAsync])
+
+  const { mutateAsync: deleteWorkoutAsync } = deleteWorkoutMutation
+  const deleteWorkout = useCallback(
+    () => deleteWorkoutAsync().then(() => undefined), [deleteWorkoutAsync])
+
+  const { mutateAsync: updateSettingsAsync } = updateSettingsMutation
+  const updateSettings = useCallback(
+    (patch: Record<string, unknown>) =>
+      updateSettingsAsync(patch).then(() => true).catch(() => false), [updateSettingsAsync])
+
+  // Reorder and delete kept themselves out of the shared flag before the
+  // migration too: reorder has savingHeats, and delete's outcome is a
+  // navigation, not a redraw.
+  const loading =
+    statusMutation.isPending || generateAssignmentsMutation.isPending ||
+    saveHeatTimeMutation.isPending || saveManyMutation.isPending ||
+    completeHeatMutation.isPending || undoHeatMutation.isPending ||
+    calculateMutation.isPending || clearScoresMutation.isPending ||
+    resetWorkoutMutation.isPending || updateSettingsMutation.isPending
 
   return {
     workout,

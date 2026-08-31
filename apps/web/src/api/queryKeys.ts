@@ -33,6 +33,9 @@ export const queryKeys = {
   compUsers: (slug: string) => ['comp-users', slug] as const,
   users: ['users'] as const,
   workouts: (slug: string) => ['workouts', slug] as const,
+  // One workout with its assignments and scores, the read behind the detail
+  // screen. Every write on that screen invalidates this key.
+  workout: (slug: string, workoutId: string) => ['workout', slug, workoutId] as const,
   // Read on the workouts screen: where a workout can happen, and everything
   // every workout needs at once.
   workoutLocations: (slug: string) => ['workout-locations', slug] as const,
