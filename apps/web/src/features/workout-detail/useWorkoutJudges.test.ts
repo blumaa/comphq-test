@@ -41,7 +41,7 @@ async function loaded() {
 beforeEach(() => {
   vi.clearAllMocks()
   answer()
-  apiPost.mockResolvedValue([])
+  apiPost.mockResolvedValue({ id: 99 })
   apiDel.mockResolvedValue({})
 })
 
@@ -83,24 +83,51 @@ describe('what the screen knows about judges', () => {
 })
 
 describe('putting a judge in a lane', () => {
-  it('posts the volunteer, the heat and the lane, then reads back', async () => {
+  it('posts the volunteer, the heat and the lane, and reads nothing back', async () => {
     const { result } = await loaded()
-    await act(() => result.current.setJudge(3, 2, 7))
+    await act(() => result.current.setJudge(3, 2, 3))
     expect(apiPost).toHaveBeenCalledWith(
       '/api/workouts/42/judge-assignments?slug=rugged-rumble',
-      { volunteerId: 7, heatNumber: 3, lane: 2 },
+      { volunteerId: 3, heatNumber: 3, lane: 2 },
     )
-    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(6))
+    // The row is built here from what is already known; the three reads of
+    // the initial load are not repeated per lane pick.
+    expect(apiGet).toHaveBeenCalledTimes(3)
   })
 
-  it('deletes the assignment when the lane is cleared', async () => {
+  it('names the judge in the lane before the server answers', async () => {
+    apiPost.mockReturnValue(new Promise(() => {}))
     const { result } = await loaded()
-    await act(() => result.current.setJudge(2, 3, null))
+    act(() => { void result.current.setJudge(3, 2, 3) })
+    await waitFor(() =>
+      expect(result.current.judgesByLane(3).get(2)?.judgeName).toBe('Cy'))
+  })
+
+  it('keeps the row id the server minted', async () => {
+    apiPost.mockResolvedValue({ id: 77, volunteerId: 3, heatNumber: 3, lane: 2 })
+    const { result } = await loaded()
+    await act(() => result.current.setJudge(3, 2, 3))
+    await waitFor(() =>
+      expect(result.current.judgesByLane(3).get(2)?.assignmentId).toBe(77))
+  })
+
+  it('hands an occupied lane straight to the new judge', async () => {
+    const { result } = await loaded()
+    await act(() => result.current.setJudge(2, 3, 3))
+    const lane = result.current.judgesByLane(2).get(3)
+    expect(lane?.judgeName).toBe('Cy')
+    expect(result.current.assignments).toHaveLength(2)
+  })
+
+  it('deletes the assignment when the lane is cleared, without waiting', async () => {
+    apiDel.mockReturnValue(new Promise(() => {}))
+    const { result } = await loaded()
+    act(() => { void result.current.setJudge(2, 3, null) })
+    await waitFor(() => expect(result.current.assignments.map((a) => a.id)).toEqual([90]))
     expect(apiDel).toHaveBeenCalledWith(
       '/api/workouts/42/judge-assignments?slug=rugged-rumble',
       { ids: [91] },
     )
-    await waitFor(() => expect(result.current.assignments.map((a) => a.id)).toEqual([90]))
   })
 
   it('asks for nothing when the cleared lane had no judge', async () => {
@@ -109,11 +136,20 @@ describe('putting a judge in a lane', () => {
     expect(apiDel).not.toHaveBeenCalled()
   })
 
-  it('reports what the server said when the post fails', async () => {
+  it('takes the lane back and reports it when the post is refused', async () => {
     apiPost.mockRejectedValue(new HttpError(409, 'Judge is busy that heat'))
     const { result } = await loaded()
-    await act(() => result.current.setJudge(3, 2, 7))
+    await act(() => result.current.setJudge(3, 2, 3))
     await waitFor(() => expect(result.current.error).toBe('Judge is busy that heat'))
+    expect(result.current.judgesByLane(3).has(2)).toBe(false)
+  })
+
+  it('puts the judge back when the delete is refused', async () => {
+    apiDel.mockRejectedValue(new HttpError(403, 'Not yours'))
+    const { result } = await loaded()
+    await act(() => result.current.setJudge(2, 3, null))
+    await waitFor(() => expect(result.current.error).toBe('Not yours'))
+    expect(result.current.judgesByLane(2).get(3)?.judgeName).toBe('Bo')
   })
 
   it('clears a previous failure when asked again', async () => {

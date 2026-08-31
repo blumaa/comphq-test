@@ -45,23 +45,32 @@ export function useWorkoutJudges(workoutId: string, slug: string) {
 
   useEffect(() => { void load() }, [load])
 
-  /** A null volunteer empties the lane; anything else claims it. */
+  /** A null volunteer empties the lane; anything else claims it.
+      Either way the lane changes as it is picked: the row is built from the
+      volunteers already read (the server upserts on heat and lane and answers
+      with the row id, which is the only thing it knows that this does not),
+      and a refusal puts the lane back and says why. */
   const setJudge = useCallback(async (heatNumber: number, lane: number, volunteerId: number | null) => {
     setError(null)
+    const before = assignments
     if (volunteerId === null) {
-      const existing = assignments.find((a) => a.heatNumber === heatNumber && a.lane === lane)
+      const existing = before.find((a) => a.heatNumber === heatNumber && a.lane === lane)
       if (!existing) return
-      try {
-        await apiDel(base, { ids: [existing.id] })
-        setAssignments((prev) => prev.filter((a) => a.id !== existing.id))
-      } catch (e) { setError(message(e)) }
+      setAssignments(before.filter((a) => a.id !== existing.id))
+      try { await apiDel(base, { ids: [existing.id] }) }
+      catch (e) { setAssignments(before); setError(message(e)) }
       return
     }
+    const judgeName = volunteers.find((v) => v.id === volunteerId)?.name ?? ''
+    const claimed = { id: -1, volunteerId, heatNumber, lane, judgeName }
+    const others = (rows: JudgeAssignment[]) =>
+      rows.filter((a) => !(a.heatNumber === heatNumber && a.lane === lane))
+    setAssignments([...others(before), claimed])
     try {
-      await apiPost(base, { volunteerId, heatNumber, lane })
-      await load()
-    } catch (e) { setError(message(e)) }
-  }, [assignments, base, load])
+      const row = await apiPost<{ id: number }>(base, { volunteerId, heatNumber, lane })
+      setAssignments((prev) => [...others(prev), { ...claimed, id: row.id }])
+    } catch (e) { setAssignments(before); setError(message(e)) }
+  }, [assignments, volunteers, base])
 
   // generate and clear rethrow after recording the error: both can run behind
   // a ConfirmDialog, which needs the real rejection to hold the prompt open,
