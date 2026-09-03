@@ -3,20 +3,26 @@ import {
   Button,
   Checkbox,
   ConfirmDialog,
+  DataTable,
   EmptyState,
+  Heading,
+  Inline,
   Input,
+  ListGroup,
+  ListItem,
+  Popover,
+  PopoverBody,
   Skeleton,
   Stack,
   Text,
   VisuallyHidden,
-  cx,
+  type DataColumn,
 } from '@mond-design-system/react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { useSetAthleteChecks } from '@/api/checks'
 import { useChecks, useOps } from '@/api/liveReads'
 import { queryKeys } from '@/api/queryKeys'
-import { DataPanel } from '@/components/DataPanel/DataPanel'
 import { LiveStatus } from '@/components/LiveStatus/LiveStatus'
 import { Notice } from '@/components/Notice/Notice'
 import { OperatorShell } from '@/layouts/OperatorShell'
@@ -25,7 +31,6 @@ import { getHeatMs, type Heat, type OpsData, type WorkoutData } from '@/lib/opsH
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { useSetHeatTime } from '../api'
 import { findConflicts } from '../conflicts'
-import styles from './AthleteControlPage.module.css'
 
 // v1: src/components/AthleteControl.tsx, served at /[slug]/control. The desk's
 // own screen — the one page on the public side that asks for a sign-in. It
@@ -39,6 +44,51 @@ type RowChecks = { corral: boolean; walkout: boolean }
 
 const EMPTY: RowChecks = { corral: false, walkout: false }
 
+// The lanes hang off the row rather than unfolding inside it: a table row has
+// nowhere to put a sub-row, and the lanes are a detail to glance at, not a
+// column to compare down.
+function LanesButton({ heatNumber, lanes }: { heatNumber: number; lanes: Heat['entries'] }) {
+  const anchor = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button
+        ref={anchor}
+        variant="ghost"
+        size="sm"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        Lanes
+      </Button>
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={anchor}
+        label={`Heat ${heatNumber} lanes`}
+      >
+        <PopoverBody>
+          <ListGroup>
+            {lanes.map((e) => (
+              <ListItem
+                key={e.athleteId}
+                leading={
+                  <Text as="span" variant="meta" tone="accent">
+                    <VisuallyHidden>Lane </VisuallyHidden>
+                    {e.lane}
+                  </Text>
+                }
+                title={<Text as="span" variant="meta">{e.athleteName}</Text>}
+              />
+            ))}
+          </ListGroup>
+        </PopoverBody>
+      </Popover>
+    </>
+  )
+}
+
 export function AthleteControlPage() {
   const { slug = '' } = useParams()
   const { data, dataUpdatedAt, error: opsError } = useOps<OpsData>(slug)
@@ -50,7 +100,6 @@ export function AthleteControlPage() {
   const setChecks = useSetAthleteChecks(slug)
   const setHeatTime = useSetHeatTime(slug)
 
-  const [expandedHeats, setExpandedHeats] = useState<Set<string>>(new Set())
   const [editingHeat, setEditingHeat] = useState<{ workoutId: number; heatNumber: number } | null>(null)
   const [heatTimeInput, setHeatTimeInput] = useState('')
   const [resetting, setResetting] = useState(false)
@@ -62,15 +111,6 @@ export function AthleteControlPage() {
   useRealtimeInvalidation(realtimeKeys)
 
   const conflicts = useMemo(() => findConflicts(workouts), [workouts])
-
-  function toggleExpand(key: string) {
-    setExpandedHeats((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
 
   function getChecks(key: string): RowChecks {
     return checks[key] ?? EMPTY
@@ -107,126 +147,131 @@ export function AthleteControlPage() {
     )
   }
 
-  // v1 drew the heats as a table, and a table keeps its columns at every width
-  // and pans when they do not fit — on the phone at the corral gate that pans
-  // the heat number itself off the side. A heat here is a thing to act on
-  // rather than a row to compare against its neighbours, so it is drawn as
-  // one: a list item that stacks on a phone and lines its parts up in columns
-  // where there is room for them.
-  function heatItem(workout: WorkoutData, heat: Heat) {
-    const key = `${workout.id}-${heat.heatNumber}`
-    const ms = getHeatMs(workout, heat.heatNumber)
-    const c = getChecks(key)
-    const open = expandedHeats.has(key)
-    const lanes = [...heat.entries].sort((a, b) => a.lane - b.lane)
-    const editing =
-      editingHeat?.workoutId === workout.id && editingHeat?.heatNumber === heat.heatNumber
+  // A struck time is still worth reading — the strike is what says it has been
+  // dealt with without taking it off the screen.
+  function tickTime(ms: number | null, struck: boolean) {
+    const time = fmtMs(ms)
+    return struck ? <s>{time}</s> : time
+  }
 
-    return (
-      // Called and walked out: the heat is behind the desk now. v1 faded the
-      // row outright, and a fade composites over whatever is under it.
-      <li key={heat.heatNumber} className={cx(styles.heat, c.corral && c.walkout && styles.done)}>
-        <span className={styles.head}>
-          <Text as="span" variant="label" tone="accent">Heat {heat.heatNumber}</Text>
-          {heat.isComplete && (
-            <Text as="span" variant="meta" tone="success">
-              <VisuallyHidden>Complete</VisuallyHidden>✓
-            </Text>
-          )}
-          {/* v1 drew a red border around the row and nothing else, which
-              says nothing to a reader who cannot see it. */}
-          {conflicts.has(key) && <Badge tone="danger">Overlap</Badge>}
-          {lanes.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={open}
-              aria-controls={`lanes-${key}`}
-              onClick={() => toggleExpand(key)}
-            >
-              Lanes
-            </Button>
-          )}
-        </span>
-
-        {/* The word is the box's own name written where a column header used
-            to be, so it is hidden from the reader who has the name already. */}
-        <span className={cx(styles.tick, styles.corral)}>
-          <Checkbox
-            label={`Corral heat ${heat.heatNumber}`}
-            labelHidden
-            checked={c.corral}
-            onChange={() => toggle(key, 'corral')}
-          />
-          <Text as="span" variant="meta" tone="muted" aria-hidden>Corral</Text>
-          <Text as="span" variant="meta" tone="warning" className={c.corral ? styles.struck : undefined}>
-            {fmtMs(ms != null ? ms - workout.callTimeSecs * 1000 : null)}
-          </Text>
-        </span>
-
-        <span className={cx(styles.tick, styles.walkout)}>
-          <Checkbox
-            label={`Walk Out heat ${heat.heatNumber}`}
-            labelHidden
-            checked={c.walkout}
-            onChange={() => toggle(key, 'walkout')}
-          />
-          <Text as="span" variant="meta" tone="muted" aria-hidden>Walk Out</Text>
-          <Text as="span" variant="meta" tone="accent" className={c.walkout ? styles.struck : undefined}>
-            {fmtMs(ms != null ? ms - workout.walkoutTimeSecs * 1000 : null)}
-          </Text>
-        </span>
-
-        <span className={cx(styles.tick, styles.start)}>
-          <Text as="span" variant="meta" tone="muted">Start</Text>
-          {editing ? (
-            <>
-              <Input
-                type="time"
-                size="sm"
-                aria-label={`Heat ${heat.heatNumber} start time`}
-                value={heatTimeInput}
-                onChange={(e) => setHeatTimeInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveHeatTime()
-                  if (e.key === 'Escape') setEditingHeat(null)
-                }}
-                autoFocus
-              />
-              <Button size="sm" disabled={setHeatTime.isPending} onClick={saveHeatTime}>Save</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingHeat(null)}>Cancel</Button>
-            </>
-          ) : (
-            <>
-              <Text as="span" variant="meta">{fmtMs(ms)}</Text>
-              {ms != null && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  aria-label={`Edit heat ${heat.heatNumber} start time`}
-                  onClick={() => startEditHeatTime(workout, heat.heatNumber)}
-                >
-                  Edit
-                </Button>
+  // v1 drew the heats as a list because the hand-rolled table under it had
+  // gone wrong, not because a table was wrong. DataTable owns the columns and
+  // their alignment now; it pans on a phone rather than stacking, a trade
+  // taken knowingly for a screen that mostly lives on the desk.
+  function heatColumns(workout: WorkoutData): DataColumn<Heat>[] {
+    return [
+      {
+        key: 'heat',
+        header: 'Heat',
+        cell: (heat) => {
+          const key = `${workout.id}-${heat.heatNumber}`
+          const lanes = [...heat.entries].sort((a, b) => a.lane - b.lane)
+          return (
+            <Inline gap="tight" wrap>
+              <Text as="span" variant="label" tone="accent">Heat {heat.heatNumber}</Text>
+              {heat.isComplete && (
+                <Text as="span" variant="meta" tone="success">
+                  <VisuallyHidden>Complete</VisuallyHidden>✓
+                </Text>
               )}
-            </>
-          )}
-        </span>
-
-        {open && (
-          <ul id={`lanes-${key}`} className={styles.lanes}>
-            {lanes.map((e) => (
-              <li key={e.athleteId}>
-                <Text as="span" variant="meta" tone="accent">
-                  <VisuallyHidden>Lane </VisuallyHidden>{e.lane}
-                </Text>{' '}
-                <Text as="span" variant="meta">{e.athleteName}</Text>
-              </li>
-            ))}
-          </ul>
-        )}
-      </li>
-    )
+              {/* v1 drew a red border around the row and nothing else, which
+                  says nothing to a reader who cannot see it. */}
+              {conflicts.has(key) && <Badge tone="danger">Overlap</Badge>}
+              {lanes.length > 0 && <LanesButton heatNumber={heat.heatNumber} lanes={lanes} />}
+            </Inline>
+          )
+        },
+      },
+      {
+        key: 'corral',
+        header: 'Corral',
+        cell: (heat) => {
+          const key = `${workout.id}-${heat.heatNumber}`
+          const ms = getHeatMs(workout, heat.heatNumber)
+          const c = getChecks(key)
+          return (
+            <Inline gap="tight">
+              <Checkbox
+                label={`Corral heat ${heat.heatNumber}`}
+                labelHidden
+                checked={c.corral}
+                onChange={() => toggle(key, 'corral')}
+              />
+              <Text as="span" variant="meta" tone="warning">
+                {tickTime(ms != null ? ms - workout.callTimeSecs * 1000 : null, c.corral)}
+              </Text>
+            </Inline>
+          )
+        },
+      },
+      {
+        key: 'walkout',
+        header: 'Walk Out',
+        cell: (heat) => {
+          const key = `${workout.id}-${heat.heatNumber}`
+          const ms = getHeatMs(workout, heat.heatNumber)
+          const c = getChecks(key)
+          return (
+            <Inline gap="tight">
+              <Checkbox
+                label={`Walk Out heat ${heat.heatNumber}`}
+                labelHidden
+                checked={c.walkout}
+                onChange={() => toggle(key, 'walkout')}
+              />
+              <Text as="span" variant="meta" tone="accent">
+                {tickTime(ms != null ? ms - workout.walkoutTimeSecs * 1000 : null, c.walkout)}
+              </Text>
+            </Inline>
+          )
+        },
+      },
+      {
+        key: 'start',
+        header: 'Start',
+        cell: (heat) => {
+          const ms = getHeatMs(workout, heat.heatNumber)
+          const editing =
+            editingHeat?.workoutId === workout.id && editingHeat?.heatNumber === heat.heatNumber
+          return (
+            <Inline gap="tight" wrap>
+              {editing ? (
+                <>
+                  <Input
+                    type="time"
+                    size="sm"
+                    aria-label={`Heat ${heat.heatNumber} start time`}
+                    value={heatTimeInput}
+                    onChange={(e) => setHeatTimeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveHeatTime()
+                      if (e.key === 'Escape') setEditingHeat(null)
+                    }}
+                    autoFocus
+                  />
+                  <Button size="sm" disabled={setHeatTime.isPending} onClick={saveHeatTime}>Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingHeat(null)}>Cancel</Button>
+                </>
+              ) : (
+                <>
+                  <Text as="span" variant="meta">{fmtMs(ms)}</Text>
+                  {ms != null && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Edit heat ${heat.heatNumber} start time`}
+                      onClick={() => startEditHeatTime(workout, heat.heatNumber)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </>
+              )}
+            </Inline>
+          )
+        },
+      },
+    ]
   }
 
   return (
@@ -278,16 +323,31 @@ export function AthleteControlPage() {
         />
       )}
 
+      {/* Not a DataPanel around the table: DataTable draws its own card, and a
+          panel around it would be the card-in-card the panel exists to end. */}
       {workouts.map((workout) => (
-        <DataPanel key={workout.id} title={`Workout ${workout.number}: ${workout.name}`} flush>
-          {workout.heats.length === 0 ? (
-            <Text tone="muted">No heats assigned.</Text>
-          ) : (
-            <ul className={styles.heats} aria-label={`Workout ${workout.number} heats`}>
-              {workout.heats.map((heat) => heatItem(workout, heat))}
-            </ul>
-          )}
-        </DataPanel>
+        <Stack
+          key={workout.id}
+          as="section"
+          gap="tight"
+          aria-label={`Workout ${workout.number}: ${workout.name}`}
+        >
+          <Heading level={2} variant="subtitle">
+            Workout {workout.number}: {workout.name}
+          </Heading>
+          <DataTable
+            label={`Workout ${workout.number} heats`}
+            columns={heatColumns(workout)}
+            rows={workout.heats}
+            rowKey={(heat) => String(heat.heatNumber)}
+            rowLabel={(heat) => `Heat ${heat.heatNumber}`}
+            rowMuted={(heat) => {
+              const c = getChecks(`${workout.id}-${heat.heatNumber}`)
+              return c.corral && c.walkout
+            }}
+            empty="No heats assigned."
+          />
+        </Stack>
       ))}
 
       {/* v1 asked with window.confirm, which draws the browser's words rather

@@ -63,12 +63,12 @@ function mount() {
   return renderRoutes(<Route path=":slug/control" element={<AthleteControlPage />} />, ['/summer/control'])
 }
 
-// The heats are a list, and an expanded heat holds a list of its own, so the
-// items this reaches for are the list's own children and not its lanes'.
+// The heats are rows of a DataTable; the first row is the header, so the
+// numbered heats start one row down.
 async function heatRow(number: number, workout = 1) {
-  const list = await screen.findByRole('list', { name: `Workout ${workout} heats` })
-  const heats = within(list).getAllByRole('listitem').filter((li) => li.parentElement === list)
-  return heats[number - 1] as HTMLElement
+  const table = await screen.findByRole('table', { name: `Workout ${workout} heats` })
+  const rows = within(table).getAllByRole('row')
+  return rows[number] as HTMLElement
 }
 
 function localHHMM(ms: number) {
@@ -129,23 +129,16 @@ describe('AthleteControlPage', () => {
     expect(await screen.findByText('No heats assigned.')).toBeInTheDocument()
   })
 
-  // A table keeps its four columns at every width and pans when they do not
-  // fit, and this screen is read on a phone at the corral gate. A heat is a
-  // thing to act on rather than a row to compare, so it is drawn as one.
-  it('draws each heat as an item in a list rather than a row in a table', async () => {
+  // The heats went back to being a table — DataTable owns the columns and
+  // their alignment, and the header names the corral, the walk-out and the
+  // start once for every heat under it. The table pans on a narrow screen;
+  // that trade was taken knowingly when the hand-rolled grid went.
+  it('draws the heats as a table whose header names the columns', async () => {
     mount()
-    await screen.findByRole('list', { name: 'Workout 1 heats' })
-    expect(screen.queryByRole('table')).not.toBeInTheDocument()
-  })
-
-  // No column headers to read them off any more, so every heat says what its
-  // own times and boxes are.
-  it('names the corral, the walk-out and the start on every heat', async () => {
-    mount()
-    const row = within(await heatRow(1))
-    expect(row.getByText('Corral')).toBeInTheDocument()
-    expect(row.getByText('Walk Out')).toBeInTheDocument()
-    expect(row.getByText('Start')).toBeInTheDocument()
+    const table = await screen.findByRole('table', { name: 'Workout 1 heats' })
+    for (const name of ['Heat', 'Corral', 'Walk Out', 'Start']) {
+      expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument()
+    }
   })
 
   it('counts the corral and walk-out back from the heat start', async () => {
@@ -251,24 +244,34 @@ describe('AthleteControlPage', () => {
     expect(apiPatch).not.toHaveBeenCalled()
   })
 
+  // The lanes hang off the row in a popover now — an inline sub-row cannot
+  // live inside a table row, and the lanes are a detail to glance at rather
+  // than a column to compare.
   it('keeps the lanes folded away until they are asked for', async () => {
     mount()
     const row = within(await heatRow(1))
-    expect(row.queryByText('Ada Ant')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ada Ant')).not.toBeInTheDocument()
     fireEvent.click(row.getByRole('button', { name: 'Lanes' }))
     expect(row.getByRole('button', { name: 'Lanes' })).toHaveAttribute('aria-expanded', 'true')
-    expect(row.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Lane 1 Ada Ant',
-      'Lane 3 Bob Brown',
-    ])
+    const panel = within(await screen.findByRole('dialog', { name: 'Heat 1 lanes' }))
+    const items = panel.getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('Lane 1')
+    expect(items[0]).toHaveTextContent('Ada Ant')
+    expect(items[1]).toHaveTextContent('Lane 3')
+    expect(items[1]).toHaveTextContent('Bob Brown')
   })
 
   it('folds them away again', async () => {
     mount()
     const row = within(await heatRow(1))
     fireEvent.click(row.getByRole('button', { name: 'Lanes' }))
+    await screen.findByRole('dialog', { name: 'Heat 1 lanes' })
     fireEvent.click(row.getByRole('button', { name: 'Lanes' }))
-    expect(row.queryByText('Ada Ant')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Heat 1 lanes' })).not.toBeInTheDocument(),
+    )
+    expect(screen.queryByText('Ada Ant')).not.toBeInTheDocument()
   })
 
   it('offers no lane list for a heat nobody is in', async () => {
