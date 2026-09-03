@@ -13,10 +13,9 @@
   grid-template-areas:
     "head head"
     "corral walkout"
-    "start start"
-    "lanes lanes";
+    "start start";
   gap: var(--mds-gap-tight);
-  padding-block: var(--mds-space-3);
+  padding-block: var(--mds-space-2);
 }
 
 .heat + .heat {
@@ -26,9 +25,7 @@
 @media (min-width: 600px) {
   .heat {
     grid-template-columns: minmax(0, 1fr) auto auto auto;
-    grid-template-areas:
-      "head corral walkout start"
-      "lanes lanes lanes lanes";
+    grid-template-areas: "head corral walkout start";
     align-items: center;
     column-gap: var(--mds-gap);
   }
@@ -75,8 +72,11 @@
   text-decoration: line-through;
 }
 
+/* The lanes are not in the template: a named area reserves its row even when
+   the list is closed, and the reserved row drags a phantom row-gap under every
+   heat. Spanning the columns instead makes the row exist only while open. */
 .lanes {
-  grid-area: lanes;
+  grid-column: 1 / -1;
   list-style: none;
   margin: 0;
   padding: 0;
