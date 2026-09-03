@@ -15,19 +15,40 @@
     "corral walkout"
     "start start";
   gap: var(--mds-gap-tight);
-  padding-block: var(--mds-space-2);
+  padding-block: var(--mds-space-1);
 }
 
 .heat + .heat {
   border-block-start: var(--mds-border-width) solid var(--mds-border-subtle);
 }
 
+/* From --mds-bp-md the list itself owns four content-sized columns and each
+   heat subgrids into them: every row shares the same tracks, so the parts line
+   up down the list, and nothing stretches — the columns sit together on the
+   left instead of the head shoving the times to the far edge. */
 @media (min-width: 600px) {
+  .heats {
+    display: grid;
+    grid-template-columns: max-content max-content max-content max-content;
+    justify-content: start;
+    column-gap: var(--mds-gap-loose);
+  }
+
   .heat {
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
-    grid-template-areas: "head corral walkout start";
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    grid-template-areas: none;
     align-items: center;
-    column-gap: var(--mds-gap);
+    gap: var(--mds-gap-tight) var(--mds-gap-loose);
+  }
+
+  /* The mobile areas no longer exist here; auto placement follows the markup,
+     which is already in column order. */
+  .head,
+  .corral,
+  .walkout,
+  .start {
+    grid-area: auto;
   }
 }
 
