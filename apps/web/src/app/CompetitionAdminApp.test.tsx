@@ -124,6 +124,29 @@ describe('CompetitionAdminApp', () => {
     expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument()
   })
 
+  // A super admin administers every competition, so the shell they are
+  // standing in is not the only one they run. Without a labelled way out, the
+  // site dashboard is reachable only by knowing the URL or guessing that the
+  // logo is a link.
+  it('offers a super admin the site screens', async () => {
+    serve({
+      '/api/me': { id: 'u1', email: USER.email, isSuper: true },
+      '/api/competitions/mine': [],
+      '/api/logo': { url: null },
+    })
+    mount()
+    await screen.findByText('comp dashboard')
+    expect(screen.getByRole('link', { name: 'Competitions' })).toHaveAttribute('href', '/admin')
+    expect(screen.getByRole('link', { name: 'Manage Users' })).toHaveAttribute('href', '/admin/users')
+  })
+
+  it('keeps the site screens from a competition admin who is not super', async () => {
+    mount()
+    await screen.findByText('comp dashboard')
+    expect(screen.queryByRole('link', { name: 'Competitions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Manage Users' })).not.toBeInTheDocument()
+  })
+
   it('points the nav at this competition', async () => {
     mount()
     await screen.findByText('comp dashboard')

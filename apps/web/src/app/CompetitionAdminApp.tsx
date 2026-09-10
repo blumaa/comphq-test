@@ -8,6 +8,7 @@ import { useSession } from '@/lib/session'
 import { AdminShell } from '@/layouts/AdminShell'
 import { Booting, GateFailed, NoAccess } from './GateStates'
 import { loginPath } from './loginPath'
+import { SITE_GROUP } from './siteNav'
 
 // The admin shell for one competition, ported from v1's
 // src/app/[slug]/admin/layout.tsx.
@@ -104,6 +105,9 @@ export function CompetitionAdminApp() {
           label: 'Setup',
           items: [{ to: `${base}/setup`, label: 'Setup', icon: 'setup' }],
         },
+        // Last, because a super admin is here to run this competition; the
+        // site screens are the way back out, not the work.
+        ...(isSuper ? [SITE_GROUP] : []),
       ]}
       extras={[
         { to: `/${slug}`, label: 'Competition Schedule', icon: 'schedule' },

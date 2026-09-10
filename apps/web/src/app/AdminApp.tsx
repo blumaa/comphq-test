@@ -7,6 +7,7 @@ import { useSession } from '@/lib/session'
 import { AdminShell } from '@/layouts/AdminShell'
 import { Booting, GateFailed, NoAccess } from './GateStates'
 import { loginPath } from './loginPath'
+import { SITE_GROUP } from './siteNav'
 
 // The site dashboard, super-admin only. A competition admin goes straight to
 // /{slug}/admin and never renders this.
@@ -85,15 +86,7 @@ export function AdminApp() {
   return (
     <AdminShell
       title={<CompetitionBrand href="/admin" />}
-      groups={[
-        {
-          label: 'Site',
-          items: [
-            { to: '/admin', label: 'Competitions', icon: 'dashboard' },
-            { to: '/admin/users', label: 'Manage Users', icon: 'users' },
-          ],
-        },
-      ]}
+      groups={[SITE_GROUP]}
       onSignOut={handleSignOut}
     >
       <Outlet />
