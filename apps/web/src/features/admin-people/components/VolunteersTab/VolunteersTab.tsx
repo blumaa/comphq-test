@@ -9,7 +9,6 @@ import {
   Select,
   Skeleton,
   Text,
-  Textarea,
 } from '@mond-design-system/react'
 import type { DataColumn } from '@mond-design-system/react'
 import { useEffect, useState } from 'react'
@@ -17,6 +16,8 @@ import { DataPanel } from '@/components/DataPanel/DataPanel'
 import { useRoster } from '../../useRoster'
 import type { RunFn, Volunteer, VolunteerRole } from '../../usePeople'
 import { RosterSheet, type AddMode } from '../RosterSheet/RosterSheet'
+import { RosterImport } from '../RosterImport/RosterImport'
+import { parseRosterCsv } from '../../rosterCsv'
 import styles from './VolunteersTab.module.css'
 
 // v1: the volunteers half of src/app/[slug]/admin/people/page.tsx. The writes
@@ -59,6 +60,7 @@ export function VolunteersTab({
   const [deleting, setDeleting] = useState<Volunteer | null>(null)
 
   const editing = volunteers.find((v) => v.id === roster.editingId) ?? null
+  const imported = parseRosterCsv(bulkText, roles, 1, bulkRoleId ? Number(bulkRoleId) : null)
 
   // The editor opens on whoever was tapped, so it opens holding what that
   // volunteer already is rather than what the last one was.
@@ -87,16 +89,16 @@ export function VolunteersTab({
     void roster.add(body(), close)
   }
 
-  // A whole line is one name here: v1 took "Doe, Jane" as it was written.
+  // COM-107: Name, Role. A role is matched by name, never created, so a list
+  // naming one that is not there sends nothing. v1 took a whole line as the
+  // name; a comma inside a name now needs quotes.
   function importMany() {
-    const lines = bulkText.split('\n').map((l) => l.trim()).filter(Boolean)
-    if (!lines.length) return
-    const entries = lines.map((line) => ({
-      name: line,
-      body: { name: line, roleId: bulkRoleId ? Number(bulkRoleId) : null },
-    }))
+    const { lines, unknown } = imported
+    if (!lines.length || unknown.length) return
+    const entries = lines.map(({ name, refId }) => ({ name, body: { name, roleId: refId } }))
     void roster.bulk(entries, () => { setBulkText(''); close() })
   }
+
 
   // The label is only passed where there is no Field to carry one — a Field
   // labels its own control, and a second name on top of it is one too many.
@@ -218,20 +220,19 @@ export function VolunteersTab({
           </>
         }
         bulk={
-          <>
-            {roles.length > 0 && (
-              <Field label="Role (applies to all imported volunteers)">
+          <RosterImport
+            format="Name, Role (role optional)"
+            example={['Jane Doe, Judge', 'John Smith']}
+            value={bulkText}
+            onChange={setBulkText}
+            refNoun="role"
+            unknown={imported.unknown}
+            fallback={roles.length > 0 && (
+              <Field label="Default role (for lines that name none)">
                 {roleSelect(bulkRoleId, setBulkRoleId)}
               </Field>
             )}
-            <Textarea
-              rows={8}
-              aria-label="One name per line"
-              placeholder={'One name per line\nJane Doe\nJohn Smith'}
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-            />
-          </>
+          />
         }
       />
 
