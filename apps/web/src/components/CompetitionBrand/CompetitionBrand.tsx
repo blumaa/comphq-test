@@ -1,6 +1,5 @@
 import { useLogo } from '@/api/logo'
-import { ComphqMark } from '@/components/ComphqMark/ComphqMark'
-import { ComphqWordmark } from '@/components/ComphqWordmark/ComphqWordmark'
+import { ComphqLogo } from '@/components/ComphqLogo/ComphqLogo'
 import { RouterAnchor } from '@/components/RouterAnchor'
 import styles from './CompetitionBrand.module.css'
 
@@ -24,10 +23,7 @@ export function CompetitionBrand({ href = '/' }: { href?: string }) {
         <img src={logo.data.url} alt="Competition logo" className={styles.logo} />
       ) : (
         <span className={styles.lockup}>
-          <span className={styles.mark}>
-            <ComphqMark label="" />
-          </span>
-          <ComphqWordmark size="inline" />
+          <ComphqLogo variant="lockup" />
         </span>
       )}
     </RouterAnchor>

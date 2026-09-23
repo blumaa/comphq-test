@@ -47,7 +47,7 @@ const PALETTE: { group: string; tokens: string[] }[] = [
 ]
 
 const COLOUR_RULE: [string, string][] = [
-  ['Cyan', 'Interactive. Links, buttons, focus — anything the hand acts on.'],
+  ['Emerald', 'Brand and interactive. Logo, links, buttons, focus — anything the hand acts on.'],
   ['Amber', 'Live now. The running heat, the current lane, the countdown. Nothing else.'],
   ['Neutral', 'Data. Names, lanes, times and standings are not coloured.'],
   ['Status', 'Outcome. Danger, warning, success, and nothing else.'],
@@ -93,7 +93,7 @@ export function StyleguidePage() {
     <PageFrame
       title="Design language"
       eyebrow="CompHQ"
-      description="Every token and every primitive, drawn against the Floor palette."
+      description="Every token and every primitive, drawn against the CompHQ brand palette."
       wide
     >
       <DataPanel title="The colour rule" description="Colour carries meaning here, not decoration.">
@@ -140,7 +140,7 @@ export function StyleguidePage() {
         </Stack>
       </DataPanel>
 
-      <DataPanel title="Buttons" description="Cyan is the only interactive colour.">
+      <DataPanel title="Buttons" description="Emerald is the only interactive colour.">
         <Stack gap="base">
           <Inline gap="tight" wrap>
             <Button>Primary</Button>
