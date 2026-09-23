@@ -1,5 +1,5 @@
 import {
-  Button, Field, Input, Select, Sheet, SheetBody, SheetFooter, SheetHeader, Stack, Switch, Text,
+  Button, Field, Input, Select, Sheet, SheetBody, SheetFooter, SheetHeader, Stack, Switch, Text, Textarea,
 } from '@mond-design-system/react'
 import { useState, type FormEvent } from 'react'
 import type { WorkoutLocation } from '@/api/workoutLocations'
@@ -65,6 +65,7 @@ function Toggle({
 export function AddWorkoutForm({ open, locations, saving, error, onClose, onCreate }: Props) {
   const [number, setNumber] = useState('')
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [scoreType, setScoreType] = useState('time')
   const [lanes, setLanes] = useState('5')
   const [heatInterval, setHeatInterval] = useState('10:00')
@@ -85,6 +86,7 @@ export function AddWorkoutForm({ open, locations, saving, error, onClose, onCrea
     onCreate({
       number: Number(number),
       name: name.trim(),
+      description: description.trim() || null,
       scoreType,
       lanes: Number(lanes),
       heatIntervalSecs: parseMinSec(heatInterval),
@@ -136,6 +138,15 @@ export function AddWorkoutForm({ open, locations, saving, error, onClose, onCrea
               </Field>
               <Field label="Name" required>
                 <Input required value={name} onChange={(e) => setName(e.target.value)} />
+              </Field>
+
+              <Field label="Description" className={styles.full}>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  placeholder="Describe the workout movements, rep scheme, time cap, etc."
+                />
               </Field>
 
               <Field label="Score Type">
