@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCsv, parseNameList } from './csv'
+import { parseCsv, parseNameList, withoutKnown } from './csv'
 
 describe('parseCsv', () => {
   it('splits rows and trims cells', () => {
@@ -34,5 +34,11 @@ describe('parseNameList', () => {
 
   it('drops repeats, whatever their case', () => {
     expect(parseNameList('RX\nrx\nScaled', 'Division')).toEqual(['RX', 'Scaled'])
+  })
+})
+
+describe('withoutKnown', () => {
+  it('drops names already known, ignoring case', () => {
+    expect(withoutKnown(['Teens', 'rx', 'Masters'], ['RX', 'Scaled'])).toEqual(['Teens', 'Masters'])
   })
 })

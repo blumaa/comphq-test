@@ -7,7 +7,8 @@ import {
 import { useLogo, useRemoveLogo, useUploadLogo } from '@/api/logo'
 import { useSettings, useUpdateSettings, type SettingsPatch } from '@/api/settings'
 import {
-  useAddVolunteerRole, useDeleteVolunteerRole, useSaveVolunteerRole, useVolunteerRoles,
+  useAddVolunteerRole, useDeleteVolunteerRole, useImportVolunteerRoles, useSaveVolunteerRole,
+  useVolunteerRoles,
 } from '@/api/volunteerRoles'
 import {
   useAddWorkoutLocation, useDeleteWorkoutLocation, useSaveWorkoutLocation, useWorkoutLocations,
@@ -61,6 +62,7 @@ export function SetupPage() {
   const addRole = useAddVolunteerRole(slug)
   const saveRole = useSaveVolunteerRole(slug)
   const deleteRole = useDeleteVolunteerRole(slug)
+  const importRoles = useImportVolunteerRoles(slug)
 
   const updateSettings = useUpdateSettings(slug)
   const uploadLogo = useUploadLogo()
@@ -217,8 +219,9 @@ export function SetupPage() {
               placeholder="e.g. Judge, Timer, Scorekeeper"
               deleteDescription={(name) => `Delete volunteer role "${name}"?`}
               rows={roles.data ?? []}
-              busy={addRole.isPending || saveRole.isPending}
+              busy={addRole.isPending || saveRole.isPending || importRoles.isPending}
               onAdd={(name) => run('Add role', addRole.mutateAsync(name))}
+              onAddMany={(names) => run('Import roles', importRoles.mutateAsync(names))}
               onSave={(id, name) => run('Save role', saveRole.mutateAsync({ id, name }))}
               onDelete={(id) => deleteRole.mutateAsync(id)}
             />

@@ -3,6 +3,7 @@ import type { DataColumn } from '@mond-design-system/react'
 import { useState } from 'react'
 import { DataPanel } from '@/components/DataPanel/DataPanel'
 import type { Division } from '@/api/divisions'
+import { withoutKnown } from '@/lib/csv'
 import { NameSheet } from '../NameSheet/NameSheet'
 
 // v1: the Divisions section of src/app/[slug]/admin/setup/page.tsx. A division
@@ -44,11 +45,8 @@ export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete, 
 
   /** A name already on the list is not sent again; the rest go on the end in
       the order they were listed. */
-  const addMany = onAddMany && ((names: string[]) => {
-    const have = new Set(rows.map((d) => d.name.toLowerCase()))
-    const fresh = names.filter((name) => !have.has(name.toLowerCase()))
-    return onAddMany(fresh.map((name, i) => ({ name, order: nextOrder + i })))
-  })
+  const addMany = onAddMany && ((names: string[]) =>
+    onAddMany(withoutKnown(names, rows.map((d) => d.name)).map((name, i) => ({ name, order: nextOrder + i }))))
 
   // v1's moveDivision guard: a re-pick of the position a division already has,
   // or a position off either end of the list, writes nothing.
