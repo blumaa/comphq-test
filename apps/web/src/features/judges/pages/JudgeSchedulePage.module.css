@@ -11,17 +11,21 @@
   gap: var(--mds-gap);
 }
 
+/* The heat owns the columns and each row takes them as a subgrid, so the
+   label column is as wide as the widest "Lane N" and the names line up down
+   the heat: a judge finds their own row by scanning one column. */
 .lanes {
+  display: grid;
+  grid-template-columns: max-content 1fr auto;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* One row per lane, the number in a fixed gutter so the names line up down the
-   heat and a judge finds their own row by scanning one column. */
 .lane {
   display: grid;
-  grid-template-columns: var(--mds-space-8) 1fr auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: var(--mds-gap);
   padding-block: var(--mds-space-2);

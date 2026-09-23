@@ -5,7 +5,6 @@ import {
   Skeleton,
   Stack,
   Text,
-  VisuallyHidden,
   cx,
 } from '@mond-design-system/react'
 import { useMemo, useState } from 'react'
@@ -146,8 +145,7 @@ function JudgeSchedule({ slug }: { slug: string }) {
                     return (
                       <li key={a.lane} className={cx(styles.lane, over && styles.over)}>
                         <Text as="span" variant="label" className={styles.laneNumber}>
-                          <VisuallyHidden>Lane </VisuallyHidden>
-                          {a.lane}
+                          Lane {a.lane}
                         </Text>
                         <Text as="span">{a.judgeName}</Text>
                         {over && (
