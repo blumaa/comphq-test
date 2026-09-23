@@ -10,10 +10,10 @@ const csvReq = (csv: string) => req({ slug: 'default', csv })
 const WORKOUTS = [{ id: 10, number: 1 }, { id: 11, number: 2 }]
 const VOLUNTEERS = [{ id: 7, name: 'Alex' }, { id: 8, name: 'Zoe' }]
 
-// Queue order: workouts, volunteers, then one delete per row plus one insert
+// Queue order: workouts, volunteers, then a delete and an insert per row
 // inside the transaction.
-const queue = (deletes: number) =>
-  mock.queueResults(WORKOUTS, VOLUNTEERS, ...Array.from({ length: deletes + 1 }, () => []))
+const queue = (rows: number) =>
+  mock.queueResults(WORKOUTS, VOLUNTEERS, ...Array.from({ length: rows * 2 }, () => []))
 
 describe('POST /api/import/judge-assignments', () => {
   it('rejects unauthenticated', async () => {
@@ -40,7 +40,7 @@ describe('POST /api/import/judge-assignments', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ imported: 1, workoutsAffected: [2], errors: [] })
     expect(mock.calls.find(c => c.method === 'values')!.args[0])
-      .toEqual([{ workoutId: 11, volunteerId: 7, heatNumber: 3, lane: 4 }])
+      .toEqual({ workoutId: 11, volunteerId: 7, heatNumber: 3, lane: 4 })
   })
 
   it('skips a header row that mentions workout', async () => {
@@ -71,6 +71,14 @@ describe('POST /api/import/judge-assignments', () => {
     expect((await res.json()).imported).toBe(1)
   })
 
+  // A spreadsheet export quotes a name holding a comma, and the quoted cell
+  // keeps its spacing.
+  it('matches a quoted name that holds a comma', async () => {
+    mock.queueResults(WORKOUTS, [{ id: 7, name: 'Doe, Jane' }], [], [])
+    const res = await POST(csvReq('1,1,1,"Doe, Jane"'))
+    expect((await res.json()).imported).toBe(1)
+  })
+
   // DEFECT (v1, ported as-is): the consequence of that trim is that a judge
   // stored the natural way, "Doe, Jane", never matches its own CSV row.
   it('fails to match a stored name that has a space after the comma', async () => {
@@ -88,19 +96,38 @@ describe('POST /api/import/judge-assignments', () => {
     expect(await res.json()).toEqual({ imported: 1, workoutsAffected: [1], errors: [] })
   })
 
-  // Errors abort the whole import, and the response is 200 with imported: 0 —
-  // the failure is in the body, not the status.
-  it('returns 200 with imported 0 when any row fails', async () => {
-    mock.queueResults(WORKOUTS, VOLUNTEERS)
+  // COM-114. A bad row is reported and skipped; the good rows still land.
+  it('imports the good rows and reports the bad ones', async () => {
+    queue(1)
     const res = await POST(csvReq('1,1,1,Alex\n1,1,2,Nobody'))
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toEqual({
-      imported: 0,
-      workoutsAffected: [],
+    expect(await res.json()).toEqual({
+      imported: 1,
+      workoutsAffected: [1],
       errors: [{ line: 2, message: 'Judge not found: "Nobody"' }],
     })
+    expect(mock.calls.find(c => c.method === 'values')!.args[0])
+      .toEqual({ workoutId: 10, volunteerId: 7, heatNumber: 1, lane: 1 })
+  })
+
+  it('touches nothing when every row fails', async () => {
+    mock.queueResults(WORKOUTS, VOLUNTEERS)
+    const body = await (await POST(csvReq('1,1,2,Nobody'))).json()
+    expect(body.imported).toBe(0)
     expect(mock.calls.some(c => c.method === 'transaction')).toBe(false)
+  })
+
+  // Two rows for one lane used to go into a single insert and trip the unique
+  // constraint, failing the lot. Rows now apply in file order: the later wins.
+  it('lets a later row for the same lane replace an earlier one', async () => {
+    queue(2)
+    const res = await POST(csvReq('1,1,1,Alex\n1,1,1,Zoe'))
+    expect((await res.json()).imported).toBe(2)
+    expect(mock.calls.filter(c => c.method === 'values').map(c => c.args[0]))
+      .toEqual([
+        { workoutId: 10, volunteerId: 7, heatNumber: 1, lane: 1 },
+        { workoutId: 10, volunteerId: 8, heatNumber: 1, lane: 1 },
+      ])
   })
 
   it('reports a row with too few columns', async () => {
@@ -142,7 +169,7 @@ describe('POST /api/import/judge-assignments', () => {
     await POST(csvReq('1,1,1,Alex\n1,1,2,Zoe'))
     expect(mock.calls.some(c => c.method === 'transaction')).toBe(true)
     expect(mock.calls.filter(c => c.method === 'delete')).toHaveLength(2)
-    expect(mock.calls.filter(c => c.method === 'insert')).toHaveLength(1)
+    expect(mock.calls.filter(c => c.method === 'insert')).toHaveLength(2)
   })
 
   it('reports affected workout numbers deduped and sorted', async () => {

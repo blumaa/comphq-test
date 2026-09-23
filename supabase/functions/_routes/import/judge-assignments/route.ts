@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { judgeAssignment, volunteer, workout } from '@/db/schema'
 import { requireCompetitionAccess } from '@/lib/auth-competition'
 import { parseJson } from '@/lib/parseJson'
+import { parseCsv } from '@/lib/csv'
 import { CsvImport } from '@/lib/schemas'
 
 interface ImportResult {
@@ -36,12 +37,13 @@ export async function POST(req: Request) {
     const toInsert: { workoutId: number; volunteerId: number; heatNumber: number; lane: number }[] = []
     const workoutsAffected = new Set<number>()
 
-    const lines = parsed.data.csv.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-    const dataLines = lines[0]?.toLowerCase().includes('workout') ? lines.slice(1) : lines
+    const rows = parseCsv(parsed.data.csv)
+    const hasHeader = rows[0]?.join(',').toLowerCase().includes('workout') ?? false
+    const dataRows = hasHeader ? rows.slice(1) : rows
 
-    for (let i = 0; i < dataLines.length; i++) {
-      const lineNum = i + (lines.length !== dataLines.length ? 2 : 1)
-      const cells = dataLines[i].split(',').map(c => c.trim())
+    for (let i = 0; i < dataRows.length; i++) {
+      const lineNum = i + (hasHeader ? 2 : 1)
+      const cells = dataRows[i]
 
       if (cells.length < 4) {
         errors.push({ line: lineNum, message: `Expected 4 columns (workout, heat, lane, judge_name), got ${cells.length}` })
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
       const lane = parseInt(laneRaw, 10)
 
       if (isNaN(workoutNumber) || isNaN(heatNumber) || isNaN(lane)) {
-        errors.push({ line: lineNum, message: `Invalid numbers in: "${dataLines[i]}"` })
+        errors.push({ line: lineNum, message: `Invalid numbers in: "${cells.join(',')}"` })
         continue
       }
 
@@ -77,13 +79,12 @@ export async function POST(req: Request) {
       workoutsAffected.add(workoutNumber)
     }
 
-    if (errors.length > 0) {
-      return Response.json({ imported: 0, workoutsAffected: [], errors } satisfies ImportResult)
-    }
-
+    // Bad rows are reported and skipped; the good ones still land (COM-114).
     if (toInsert.length > 0) {
       await db.transaction(async (tx) => {
-        // Delete any rows that would violate either unique constraint:
+        // Rows apply in file order. Each first clears whatever holds its lane
+        // or its judge in that heat, so neither unique constraint trips and a
+        // later row for the same slot replaces an earlier one:
         // (workoutId, heatNumber, lane) OR (workoutId, heatNumber, volunteerId)
         for (const row of toInsert) {
           await tx.delete(judgeAssignment).where(
@@ -96,15 +97,15 @@ export async function POST(req: Request) {
               ),
             ),
           )
+          await tx.insert(judgeAssignment).values(row)
         }
-        await tx.insert(judgeAssignment).values(toInsert)
       })
     }
 
     return Response.json({
       imported: toInsert.length,
       workoutsAffected: [...workoutsAffected].sort((a, b) => a - b),
-      errors: [],
+      errors,
     } satisfies ImportResult)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

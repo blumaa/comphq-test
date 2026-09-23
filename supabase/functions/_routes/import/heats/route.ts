@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { athlete, workout } from '@/db/schema'
 import { authErrorResponse, requireCompetitionAccess } from '@/lib/auth-competition'
+import { parseCsv } from '@/lib/csv'
 
 interface CsvRow {
   workoutNumber: number; heatNumber: number; laneNumber: number; athleteName: string; lineIndex: number
@@ -11,31 +12,6 @@ interface ImportResult {
   workoutsAffected: number[]
   errors: { line: number; message: string }[]
   warnings: { message: string }[]
-}
-
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim()
-    if (!line) continue
-    const cells: string[] = []
-    let cur = '', inQuote = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (inQuote) {
-        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++ }
-        else if (ch === '"') inQuote = false
-        else cur += ch
-      } else {
-        if (ch === '"') inQuote = true
-        else if (ch === ',') { cells.push(cur.trim()); cur = '' }
-        else cur += ch
-      }
-    }
-    cells.push(cur.trim())
-    rows.push(cells)
-  }
-  return rows
 }
 
 function isHeaderRow(cells: string[]): boolean {
