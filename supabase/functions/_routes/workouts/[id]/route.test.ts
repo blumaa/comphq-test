@@ -64,6 +64,20 @@ describe('PUT /api/workouts/[id]', () => {
     expect(setCall!.args[0]).toEqual({ name: 'New', status: 'active' })
   })
 
+  it('saves the description (COM-112)', async () => {
+    mock.queueResult([{ id: 1 }]) // update().returning()
+    await PUT(putReq({ description: '3 rounds for time' }), params('1'))
+    const setCall = mock.calls.find((c) => c.method === 'set')
+    expect(setCall!.args[0]).toEqual({ description: '3 rounds for time' })
+  })
+
+  it('clears the description when sent null', async () => {
+    mock.queueResult([{ id: 1 }]) // update().returning()
+    await PUT(putReq({ description: null }), params('1'))
+    const setCall = mock.calls.find((c) => c.method === 'set')
+    expect(setCall!.args[0]).toEqual({ description: null })
+  })
+
   it('nulls all partBRawScore / partBPoints when partBEnabled flips off', async () => {
     mock.queueResult([{ id: 1, partBEnabled: false }]) // workout update
     mock.queueResult(undefined) // score update
