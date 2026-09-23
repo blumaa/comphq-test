@@ -1,4 +1,4 @@
-import { getHeatMs, type WorkoutData } from '@/lib/opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type WorkoutData } from '@/lib/opsHeats'
 
 // v1: the inline `conflict` expression in AthleteControl.tsx, lifted out whole.
 // It answers one question — is this heat about to collide with the workout
@@ -26,7 +26,12 @@ function heatTimes(workout: WorkoutData): number[] {
     .filter((ms): ms is number => ms != null && Number.isFinite(ms))
 }
 
-/** Heat keys — `${workoutId}-${heatNumber}` — whose times collide. */
+/** One heat's key, shared by the conflict set and the check maps. */
+export function heatKey(workoutId: number, heatNumber: number): string {
+  return `${workoutId}-${heatNumber}`
+}
+
+/** Heat keys (see heatKey) whose times collide. */
 export function findConflicts(workouts: WorkoutData[]): Set<string> {
   const flagged = new Set<string>()
 
@@ -39,18 +44,18 @@ export function findConflicts(workouts: WorkoutData[]): Set<string> {
     const nextEarliestMs = nextTimes.length > 0 ? Math.min(...nextTimes) : null
     const prevLatestMs = prevTimes.length > 0 ? Math.max(...prevTimes) : null
     const prevLatestWalkoutMs =
-      prev && prevLatestMs != null ? prevLatestMs - prev.walkoutTimeSecs * 1000 : null
+      prev ? getWalkoutMs(prev, prevLatestMs) : null
 
     for (const heat of workout.heats) {
       const heatMs = getHeatMs(workout, heat.heatNumber)
-      const corralMs = heatMs != null ? heatMs - workout.callTimeSecs * 1000 : null
+      const corralMs = getCorralMs(workout, heatMs)
       const collides =
         (heatMs != null &&
           ((nextEarliestMs != null && heatMs >= nextEarliestMs) ||
             (prevLatestMs != null && heatMs <= prevLatestMs))) ||
         (corralMs != null && prevLatestWalkoutMs != null && corralMs <= prevLatestWalkoutMs + GAP_MS)
 
-      if (collides) flagged.add(`${workout.id}-${heat.heatNumber}`)
+      if (collides) flagged.add(heatKey(workout.id, heat.heatNumber))
     }
   })
 

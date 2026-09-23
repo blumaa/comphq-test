@@ -135,6 +135,7 @@ describe('what it sends', () => {
     expect(onCreate).toHaveBeenCalledWith({
       number: 3,
       name: 'Fran',
+      description: null,
       scoreType: 'time',
       lanes: 5,
       heatIntervalSecs: 600,
@@ -171,6 +172,15 @@ describe('what it sends', () => {
     type(/^Name/, '  Fran  ')
     submit()
     expect(onCreate.mock.calls[0][0].name).toBe('Fran')
+  })
+
+  // COM-111. The description can be written at create, not only on edit.
+  it('sends the description, trimmed', () => {
+    const { onCreate } = form()
+    fillRequired()
+    type(/^Description/, '  21-15-9 thrusters and pull-ups  ')
+    submit()
+    expect(onCreate.mock.calls[0][0].description).toBe('21-15-9 thrusters and pull-ups')
   })
 
   // The four clock boxes are minutes:seconds and the API stores seconds.

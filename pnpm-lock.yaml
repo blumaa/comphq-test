@@ -60,11 +60,11 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(gsap@3.15.0)(react@19.2.8)
       '@mond-design-system/react':
-        specifier: 6.0.0
-        version: 6.0.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: 6.4.0
+        version: 6.4.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@mond-design-system/tokens':
-        specifier: 4.1.0
-        version: 4.1.0
+        specifier: 4.3.0
+        version: 4.3.0
       '@supabase/supabase-js':
         specifier: ^2.112.3
         version: 2.112.4
@@ -341,14 +341,14 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mond-design-system/react@6.0.0':
-    resolution: {integrity: sha512-5oT/qRvM/E7igrQV5GQSKh0OOXm2Ef2iCcCqzYa7+ewKwLRTOBDyl/PhC6zXziqEpmwhNWZPmgSJAAjBvx4wPg==}
+  '@mond-design-system/react@6.4.0':
+    resolution: {integrity: sha512-zI2nrXWDFM7K+A9w5JYFyOEHLezCNwVQkjjgbKwXTu7JbjivSPUg2mV82ZEyLXDoKjRJyHBv2s6ThZ+8vW22OQ==}
     peerDependencies:
       react: '>=19'
       react-dom: '>=19'
 
-  '@mond-design-system/tokens@4.1.0':
-    resolution: {integrity: sha512-tHiVsoW8FhwSPYr1zWrqEXAS/NnxC3yLGMFg3/zxtBDEEefLTRS0qztoje8RePvB5oukeLF+y1ZF6vFw2cbV3Q==}
+  '@mond-design-system/tokens@4.3.0':
+    resolution: {integrity: sha512-NJnR2955/anZbtsUY8QW+rfmFyNAYyT4LjtGEPc9HJRXmgPdON/Cziu3O6vFDWto1ltCiwluuuiw+wkk4PjFuA==}
 
   '@oxc-project/types@0.147.0':
     resolution: {integrity: sha512-IJ3s6ltHLp45S0bh7phkX+gJO7A1Wuz2EaqpAhb8WjqDwbzMiWKHhyyT42tskaWjEYXtHtVCPpnBJVT9+dcRLg==}
@@ -1809,14 +1809,14 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mond-design-system/react@6.0.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@mond-design-system/react@6.4.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@mond-design-system/tokens': 4.1.0
+      '@mond-design-system/tokens': 4.3.0
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@mond-design-system/tokens@4.1.0': {}
+  '@mond-design-system/tokens@4.3.0': {}
 
   '@oxc-project/types@0.147.0': {}
 

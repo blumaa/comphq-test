@@ -42,7 +42,7 @@ export function useWorkouts(slug: string) {
 
 /** The fields the create form fills. Every one of them is sent on every
     create, defaults included, because v1's form has a value in each box. */
-export type WorkoutDraft = Omit<Workout, 'id' | 'competitionId' | 'status' | 'description' | 'heatStartOverrides'>
+export type WorkoutDraft = Omit<Workout, 'id' | 'competitionId' | 'status' | 'heatStartOverrides'>
 
 export function useCreateWorkout(slug: string) {
   const qc = useQueryClient()

@@ -130,7 +130,7 @@ describe('adding athletes', () => {
     draw({ adding: true })
     const form = sheet('Add athlete')
     fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
-    fireEvent.change(form.getByLabelText('Division (applies to all imported athletes)'), { target: { value: '3' } })
+    fireEvent.change(form.getByLabelText(/^Default division/), { target: { value: '3' } })
     fireEvent.change(form.getByRole('textbox', { name: /One per line/ }), {
       target: { value: 'Cy Cole, 9\n\nDi Dean\n' },
     })
@@ -138,6 +138,46 @@ describe('adding athletes', () => {
     await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
     expect(apiPost.mock.calls[0][1]).toEqual({ slug: 'rugged-rumble', name: 'Cy Cole', bibNumber: '9', divisionId: 3 })
     expect(apiPost.mock.calls[1][1]).toEqual({ slug: 'rugged-rumble', name: 'Di Dean', bibNumber: null, divisionId: 3 })
+  })
+
+  // COM-108. One list can hold every division: a third column names it, and
+  // a blank one takes the division picked above.
+  it('puts each imported line in the division it names', async () => {
+    draw({ adding: true })
+    const form = sheet('Add athlete')
+    fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
+    fireEvent.change(form.getByLabelText(/^Default division/), { target: { value: '3' } })
+    fireEvent.change(form.getByRole('textbox', { name: /One per line/ }), {
+      target: { value: 'Name, Bib, Division\nCy Cole, 9, scaled\nDi Dean' },
+    })
+    press('Import athletes')
+    await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
+    expect(apiPost.mock.calls[0][1]).toEqual({ slug: 'rugged-rumble', name: 'Cy Cole', bibNumber: '9', divisionId: 4 })
+    expect(apiPost.mock.calls[1][1]).toEqual({ slug: 'rugged-rumble', name: 'Di Dean', bibNumber: null, divisionId: 3 })
+  })
+
+  it('names a division that does not exist and imports nothing', async () => {
+    draw({ adding: true })
+    const form = sheet('Add athlete')
+    fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
+    fireEvent.change(form.getByRole('textbox', { name: /One per line/ }), {
+      target: { value: 'Cy Cole, 9, Teens\nDi Dean, , Rx' },
+    })
+    expect(form.getByRole('alert')).toHaveTextContent('No division named Teens')
+    press('Import athletes')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiPost).not.toHaveBeenCalled()
+  })
+
+  it('fills the list from a dropped file', async () => {
+    draw({ adding: true })
+    const form = sheet('Add athlete')
+    fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
+    const file = new File(['Cy Cole, 9, Rx'], 'athletes.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type=file]') as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [file] })
+    fireEvent.change(input)
+    await waitFor(() => expect(form.getByRole('textbox', { name: /One per line/ })).toHaveValue('Cy Cole, 9, Rx'))
   })
 })
 

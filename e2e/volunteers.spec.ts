@@ -62,14 +62,14 @@ test.describe('volunteers roster', () => {
     await expectNoErrorBanner(page)
   })
 
-  test('import many lands every pasted line with the chosen role', async ({ page }) => {
+  test('import many lands every pasted line with its named or default role', async ({ page }) => {
     await openVolunteers(page)
 
     await page.getByRole('button', { name: 'Add volunteer' }).click()
     const sheet = page.getByRole('dialog', { name: 'Add volunteer' })
     await sheet.getByRole('radio', { name: 'Import many' }).click()
-    await sheet.getByRole('combobox', { name: /applies to all/ }).selectOption({ label: 'Judge' })
-    await sheet.getByRole('textbox', { name: 'One name per line' }).fill('Imp One\nImp Two\nImp Three')
+    await sheet.getByRole('combobox', { name: /Default role/ }).selectOption({ label: 'Judge' })
+    await sheet.getByRole('textbox', { name: /One per line/ }).fill('Imp One\nImp Two, judge\nImp Three')
     await sheet.getByRole('button', { name: 'Import volunteers' }).click()
 
     for (const name of ['Imp One', 'Imp Two', 'Imp Three']) {

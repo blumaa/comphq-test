@@ -141,6 +141,14 @@ describe('JudgeSchedulePage', () => {
     expect(rows.map((r) => r.textContent)).toEqual(['Lane 1Jo Judge', 'Lane 2Kim Kane'])
   })
 
+  // COM-118. "Lane 1" is printed on screen, not a bare 1 with the word kept
+  // for screen readers only.
+  it('prints the lane label in full', async () => {
+    mount()
+    const label = within((await lanes(1)).getAllByRole('listitem')[0]).getByText('Lane 1')
+    expect(label.innerHTML).toBe('Lane 1')
+  })
+
   // Three heats in a row against a limit of two: the third is the one to fix.
   it('flags the heat that runs a judge past the limit', async () => {
     mount()

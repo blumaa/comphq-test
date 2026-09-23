@@ -3,6 +3,7 @@ import type { DataColumn } from '@mond-design-system/react'
 import { useState } from 'react'
 import { DataPanel } from '@/components/DataPanel/DataPanel'
 import type { Division } from '@/api/divisions'
+import { withoutKnown } from '@/lib/csv'
 import { NameSheet } from '../NameSheet/NameSheet'
 
 // v1: the Divisions section of src/app/[slug]/admin/setup/page.tsx. A division
@@ -28,9 +29,11 @@ interface Props {
   /** Both are places in the list as drawn, counting from zero. */
   onMove: (from: number, to: number) => Promise<unknown>
   onDelete: (id: number) => Promise<unknown>
+  /** A pasted list, each already given its place on the end (COM-109). */
+  onAddMany?: (inputs: { name: string; order: number }[]) => Promise<unknown>
 }
 
-export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete }: Props) {
+export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete, onAddMany }: Props) {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Division | null>(null)
   const [deleting, setDeleting] = useState<Division | null>(null)
@@ -39,6 +42,11 @@ export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete }
       which is v1's suggestion, counting from the last order rather than from
       how many divisions there are. */
   const nextOrder = (rows[rows.length - 1]?.order ?? 0) + 1
+
+  /** A name already on the list is not sent again; the rest go on the end in
+      the order they were listed. */
+  const addMany = onAddMany && ((names: string[]) =>
+    onAddMany(withoutKnown(names, rows.map((d) => d.name)).map((name, i) => ({ name, order: nextOrder + i }))))
 
   // v1's moveDivision guard: a re-pick of the position a division already has,
   // or a position off either end of the list, writes nothing.
@@ -121,6 +129,8 @@ export function DivisionsSection({ rows, busy, onAdd, onSave, onMove, onDelete }
         onSubmit={(name) => editing
           ? onSave(editing.id, { name, order: editing.order })
           : onAdd({ name, order: nextOrder })}
+        onSubmitMany={editing ? undefined : addMany}
+        plural="divisions"
       />
 
       <ConfirmDialog

@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { PgDialect } from 'drizzle-orm/pg-core'
+import type { SQL } from 'drizzle-orm'
 import { drizzleMock as mock, setAuthUser } from '@/test/setup'
 import { GET, PATCH } from './route'
 
@@ -84,6 +86,31 @@ describe('PATCH /api/checks', () => {
     await PATCH(patchReq({ slug: 'default', type: 'equipment', checks: { barbell: 3 } }))
     expect(mock.calls.find(c => c.method === 'values')!.args[0])
       .toEqual({ competitionId: 1, key: 'equipChecks', value: '{"barbell":3}' })
+  })
+
+  // COM-116. A tick sends one entry, merged into the stored map inside the
+  // upsert, so two ticks racing from one phone or two never overwrite each
+  // other with an older copy of the whole map.
+  it('merges a single entry into the stored map in the database', async () => {
+    mock.queueResults([])
+    const entry = { key: '7-1', value: { corral: true, walkout: false } }
+    const res = await PATCH(patchReq({ slug: 'default', type: 'athlete', entry }))
+    expect(res.status).toBe(204)
+    expect(mock.calls.find(c => c.method === 'values')!.args[0])
+      .toEqual({ competitionId: 1, key: 'athleteChecks', value: '{"7-1":{"corral":true,"walkout":false}}' })
+    const conflict = mock.calls.find(c => c.method === 'onConflictDoUpdate')!.args[0] as { set: { value: SQL } }
+    const { sql, params } = new PgDialect().sqlToQuery(conflict.set.value)
+    expect(sql).toMatch(/::jsonb \|\| .*::jsonb/)
+    expect(params).toContain('{"7-1":{"corral":true,"walkout":false}}')
+  })
+
+  it('400s when both a whole map and an entry are sent', async () => {
+    const body = { slug: 'default', type: 'athlete', checks: {}, entry: { key: '7-1', value: true } }
+    expect((await PATCH(patchReq(body))).status).toBe(400)
+  })
+
+  it('400s when neither a whole map nor an entry is sent', async () => {
+    expect((await PATCH(patchReq({ slug: 'default', type: 'athlete' }))).status).toBe(400)
   })
 
   it('upserts on (competitionId, key) rather than inserting a duplicate', async () => {

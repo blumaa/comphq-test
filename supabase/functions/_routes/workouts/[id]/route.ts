@@ -111,6 +111,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const patch: Partial<typeof workout.$inferInsert> = {}
 
     if (d.name !== undefined) patch.name = d.name
+    if (d.description !== undefined) patch.description = d.description ?? null
     if (d.scoreType !== undefined) patch.scoreType = d.scoreType
     if (d.lanes !== undefined) patch.lanes = d.lanes
     if (d.heatIntervalSecs !== undefined) patch.heatIntervalSecs = d.heatIntervalSecs

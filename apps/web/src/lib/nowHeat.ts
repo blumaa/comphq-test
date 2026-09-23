@@ -1,4 +1,4 @@
-import { getHeatMs, type Heat, type OpsData, type WorkoutData } from './opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type Heat, type OpsData, type WorkoutData } from './opsHeats'
 
 // Which heat is happening now, and what is queued behind it. v1 answered this
 // three times — the public schedule, the ops view and the judge screen each
@@ -43,8 +43,8 @@ export function pendingHeats(data: OpsData | undefined, checks: AthleteChecks = 
             workout,
             heat,
             startMs,
-            corralMs: startMs == null ? null : startMs - workout.callTimeSecs * 1000,
-            walkoutMs: startMs == null ? null : startMs - workout.walkoutTimeSecs * 1000,
+            corralMs: getCorralMs(workout, startMs),
+            walkoutMs: getWalkoutMs(workout, startMs),
             divisions: [...new Set(heat.entries.map((e) => e.divisionName).filter((d): d is string => !!d))],
           }
         }),

@@ -169,6 +169,76 @@ describe('adding an item', () => {
   })
 })
 
+// COM-113. A list of kit, one item per line with an optional division. A
+// division is matched by name, never created; a blank one takes the default.
+describe('importing a list', () => {
+  async function paste(text: string) {
+    const panel = await open()
+    await screen.findByText('Barbell')
+    fireEvent.click(within(panel).getByRole('radio', { name: 'Import many' }))
+    fireEvent.change(within(panel).getByRole('textbox', { name: /One per line/ }), {
+      target: { value: text },
+    })
+    return panel
+  }
+
+  it('posts each line with its own division, a blank one for everyone', async () => {
+    const panel = await paste('Item, Division\nSki erg, scaled\nBox, ')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }))
+    await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
+    expect(apiPost.mock.calls).toEqual([
+      ['/api/workouts/42/equipment?slug=rugged-rumble', { item: 'Ski erg', divisionId: 7 }],
+      ['/api/workouts/42/equipment?slug=rugged-rumble', { item: 'Box', divisionId: null }],
+    ])
+  })
+
+  it('gives a line naming no division the default division', async () => {
+    const panel = await paste('Ski erg')
+    fireEvent.change(within(panel).getByRole('combobox', { name: /Default division/ }), {
+      target: { value: '5' },
+    })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }))
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith(
+      expect.any(String),
+      { item: 'Ski erg', divisionId: 5 },
+    ))
+  })
+
+  it('empties the box and reads the list back', async () => {
+    const panel = await paste('Ski erg')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }))
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(4))
+    expect(within(panel).getByRole('textbox', { name: /One per line/ })).toHaveValue('')
+  })
+
+  it('names a division that does not exist and sends nothing', async () => {
+    const panel = await paste('Ski erg, Teens')
+    expect(within(panel).getByRole('alert')).toHaveTextContent('No division named Teens')
+    expect(within(panel).getByRole('button', { name: 'Import' })).toBeDisabled()
+    expect(apiPost).not.toHaveBeenCalled()
+  })
+
+  it('keeps going past a refused line and names it', async () => {
+    apiPost.mockRejectedValueOnce(new HttpError(400, 'Invalid request'))
+    const panel = await paste('Ski erg\nBox')
+    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }))
+    expect(await within(panel).findByText(/Could not add "Ski erg" \(Invalid request\)/)).toBeInTheDocument()
+    expect(apiPost).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(4))
+  })
+
+  it('fills the list from a dropped file', async () => {
+    const panel = await open()
+    await screen.findByText('Barbell')
+    fireEvent.click(within(panel).getByRole('radio', { name: 'Import many' }))
+    const file = new File(['Ski erg, Rx'], 'equipment.csv', { type: 'text/csv' })
+    const input = panel.querySelector('input[type=file]') as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [file] })
+    fireEvent.change(input)
+    await waitFor(() => expect(within(panel).getByRole('textbox', { name: /One per line/ })).toHaveValue('Ski erg, Rx'))
+  })
+})
+
 describe('removing an item', () => {
   it('deletes it and takes it off the list', async () => {
     const panel = await open()

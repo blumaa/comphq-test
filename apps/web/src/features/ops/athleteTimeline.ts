@@ -1,4 +1,4 @@
-import { getHeatMs, type OpsData } from '@/lib/opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type OpsData } from '@/lib/opsHeats'
 
 // Every heat one athlete is in, in the order they will run them. v1's ops
 // screen could only be read workout-first, so answering "where is Alice now"
@@ -14,6 +14,8 @@ export type AthleteStop = {
   isComplete: boolean
   lane: number
   startMs: number | null
+  corralMs: number | null
+  walkoutMs: number | null
   scoreDisplay: string | null
   tiebreakDisplay: string | null
 }
@@ -52,6 +54,7 @@ export function athletesIn(data: OpsData | undefined): Athlete[] {
         }
         athlete.bibNumber ??= entry.bibNumber
         athlete.divisionName ??= entry.divisionName
+        const startMs = getHeatMs(workout, heat.heatNumber)
         athlete.stops.push({
           workoutId: workout.id,
           workoutNumber: workout.number,
@@ -60,7 +63,9 @@ export function athletesIn(data: OpsData | undefined): Athlete[] {
           heatNumber: heat.heatNumber,
           isComplete: heat.isComplete,
           lane: entry.lane,
-          startMs: getHeatMs(workout, heat.heatNumber),
+          startMs,
+          corralMs: getCorralMs(workout, startMs),
+          walkoutMs: getWalkoutMs(workout, startMs),
           scoreDisplay: entry.scoreDisplay,
           tiebreakDisplay: entry.tiebreakDisplay,
         })

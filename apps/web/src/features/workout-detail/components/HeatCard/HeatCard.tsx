@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Draggable, gsap } from '@/lib/gsap-client'
 import { resolveDestIndex } from '@/lib/heat-reorder'
 import { calcHeatStartMs, fmtHeatTime } from '@/lib/heatTime'
+import { getCorralMs, getWalkoutMs } from '@/lib/opsHeats'
 import { formatScore, formatTiebreak } from '@/lib/scoreFormat'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import type { useScoreInputs } from '../../useScoreInputs'
@@ -251,8 +252,8 @@ export function HeatCard({
                 {startLabel}
                 {heatMs != null && (
                   <>
-                    {' · '}Corral: {fmtHeatTime(heatMs - workout.callTimeSecs * 1000)}
-                    {' · '}Walk Out: {fmtHeatTime(heatMs - workout.walkoutTimeSecs * 1000)}
+                    {' · '}Corral: {fmtHeatTime(getCorralMs(workout, heatMs))}
+                    {' · '}Walk Out: {fmtHeatTime(getWalkoutMs(workout, heatMs))}
                   </>
                 )}
               </Text>

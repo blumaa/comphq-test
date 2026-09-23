@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { setting } from '@/db/schema'
@@ -20,6 +20,19 @@ async function upsertSetting(competitionId: number, key: string, value: string) 
     .onConflictDoUpdate({ target: [setting.competitionId, setting.key], set: { value } })
 }
 
+// One entry merged into the stored map inside the upsert. Postgres locks the
+// row for the update, so concurrent ticks each land on the map the one before
+// left, instead of overwriting it with the older copy they were built from.
+async function mergeSetting(competitionId: number, key: string, entry: string) {
+  await db
+    .insert(setting)
+    .values({ competitionId, key, value: entry })
+    .onConflictDoUpdate({
+      target: [setting.competitionId, setting.key],
+      set: { value: sql`(${setting.value}::jsonb || ${entry}::jsonb)::text` },
+    })
+}
+
 export async function GET(req: Request) {
   const slug = new URL(req.url).searchParams.get('slug') ?? ''
   const competition = await resolveCompetition(slug)
@@ -38,11 +51,12 @@ export async function GET(req: Request) {
   return Response.json({ athleteChecks, equipChecks })
 }
 
-const ChecksPatch = z.object({
-  slug: z.string().min(1),
-  type: z.enum(['athlete', 'equipment']),
-  checks: z.record(z.string(), z.unknown()),
-})
+// `checks` replaces the whole map (the reset); `entry` merges one tick.
+const base = { slug: z.string().min(1), type: z.enum(['athlete', 'equipment']) }
+const ChecksPatch = z.union([
+  z.strictObject({ ...base, checks: z.record(z.string(), z.unknown()) }),
+  z.strictObject({ ...base, entry: z.object({ key: z.string().min(1), value: z.unknown() }) }),
+])
 
 export async function PATCH(req: Request) {
   let body: unknown
@@ -51,12 +65,17 @@ export async function PATCH(req: Request) {
   const parsed = ChecksPatch.safeParse(body)
   if (!parsed.success) return new Response('Invalid request', { status: 400 })
 
-  const { slug, type, checks } = parsed.data
+  const { slug, type } = parsed.data
   const competition = await resolveCompetition(slug)
   if (!competition) return new Response('Competition not found', { status: 404 })
 
   const key = type === 'athlete' ? 'athleteChecks' : 'equipChecks'
-  await upsertSetting(competition.id, key, JSON.stringify(checks))
+  if ('entry' in parsed.data) {
+    const { entry } = parsed.data
+    await mergeSetting(competition.id, key, JSON.stringify({ [entry.key]: entry.value }))
+  } else {
+    await upsertSetting(competition.id, key, JSON.stringify(parsed.data.checks))
+  }
 
   return new Response(null, { status: 204 })
 }

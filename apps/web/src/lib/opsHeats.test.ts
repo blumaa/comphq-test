@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getHeatMs, type WorkoutData } from './opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type WorkoutData } from './opsHeats'
 
 const workout = (over: Partial<WorkoutData> = {}): WorkoutData => ({
   id: 1,
@@ -32,5 +32,20 @@ describe('getHeatMs', () => {
 
   it('has no time to give when the workout has no start time', () => {
     expect(getHeatMs(workout({ startTime: null }), 1)).toBeNull()
+  })
+})
+
+describe('getCorralMs and getWalkoutMs', () => {
+  const start = Date.parse('2026-05-01T10:00:00.000Z')
+  const w = workout({ callTimeSecs: 600, walkoutTimeSecs: 120 })
+
+  it('counts the call and walk out offsets back from the heat start', () => {
+    expect(getCorralMs(w, start)).toBe(start - 600_000)
+    expect(getWalkoutMs(w, start)).toBe(start - 120_000)
+  })
+
+  it('has no time to give when the heat has none', () => {
+    expect(getCorralMs(w, null)).toBeNull()
+    expect(getWalkoutMs(w, null)).toBeNull()
   })
 })

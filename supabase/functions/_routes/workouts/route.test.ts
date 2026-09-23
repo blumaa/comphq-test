@@ -65,6 +65,28 @@ describe('POST /api/workouts', () => {
       number: 1, name: 'WOD 1', scoreType: 'time', lanes: 5,
       timeBetweenHeatsSecs: 120, status: 'draft', mixedHeats: true,
       tiebreakEnabled: false, partBEnabled: false, partBScoreType: 'time',
+      description: null,
     })
+  })
+
+  // COM-111. The create form sends a description; it must reach the row.
+  it('stores the description sent with the create', async () => {
+    mock.queueResult({ data: { id: 1 }, error: null })
+    const res = await POST(postReq({
+      number: 1, name: 'WOD 1', description: '21-15-9', scoreType: 'time', lanes: 5,
+      heatIntervalSecs: 300, callTimeSecs: 60, walkoutTimeSecs: 30,
+    }))
+    expect(res.status).toBe(201)
+    const insert = mock.lastCall!.ops.find(o => o.op === 'insert')!
+    expect(insert.args[0]).toMatchObject({ description: '21-15-9' })
+  })
+
+  it('accepts a null description, as the form sends when the box is empty', async () => {
+    mock.queueResult({ data: { id: 1 }, error: null })
+    const res = await POST(postReq({
+      number: 1, name: 'WOD 1', description: null, scoreType: 'time', lanes: 5,
+      heatIntervalSecs: 300, callTimeSecs: 60, walkoutTimeSecs: 30,
+    }))
+    expect(res.status).toBe(201)
   })
 })

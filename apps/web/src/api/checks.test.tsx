@@ -23,32 +23,63 @@ beforeEach(() => {
 describe('check writers', () => {
   it('shows the athlete tick before the server has been told', () => {
     const { result } = renderHook(() => useSetAthleteChecks('summer'), { wrapper })
-    result.current.set({ '7-1': { corral: true, walkout: false } })
+    result.current.setEntry('7-1', () => ({ corral: true, walkout: false }))
     expect(client.getQueryData(queryKeys.checks('summer'))).toEqual({
       athleteChecks: { '7-1': { corral: true, walkout: false } },
       equipChecks: {},
     })
   })
 
-  it('sends the athlete ticks as the whole record, as v1 did', async () => {
+  it('setAsync sends the whole map, for the reset', async () => {
     const { result } = renderHook(() => useSetAthleteChecks('summer'), { wrapper })
-    const checks = { '7-1': { corral: true, walkout: true } }
-    result.current.set(checks)
-    await waitFor(() =>
-      expect(apiPatch).toHaveBeenCalledWith('/api/checks', { slug: 'summer', type: 'athlete', checks }),
-    )
+    await result.current.setAsync({})
+    expect(apiPatch).toHaveBeenCalledWith('/api/checks', { slug: 'summer', type: 'athlete', checks: {} })
   })
 
-  it('sends the equipment ticks under their own type', async () => {
+  // COM-116. A tick is one entry, read against the cache at the moment of the
+  // tap, so a second tap before the screen re-renders still keeps the first.
+  it('merges a tick into the latest cache, not a render-time copy', () => {
+    client.setQueryData(queryKeys.checks('summer'), {
+      athleteChecks: { '7-1': { corral: true, walkout: false } },
+      equipChecks: {},
+    })
+    const { result } = renderHook(() => useSetAthleteChecks('summer'), { wrapper })
+    result.current.setEntry('7-2', () => ({ corral: true, walkout: false }))
+    result.current.setEntry('7-1', (old) => ({ corral: false, ...old, walkout: true }))
+    expect(client.getQueryData(queryKeys.checks('summer'))).toEqual({
+      athleteChecks: {
+        '7-1': { corral: true, walkout: true },
+        '7-2': { corral: true, walkout: false },
+      },
+      equipChecks: {},
+    })
+  })
+
+  it('sends a tick as one entry, not the whole map', async () => {
     const { result } = renderHook(() => useSetEquipChecks('summer'), { wrapper })
-    result.current.set({ '7-1-Rx': true })
+    result.current.setEntry('7-1-Rx', (old) => !old)
     await waitFor(() =>
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', {
         slug: 'summer',
         type: 'equipment',
-        checks: { '7-1-Rx': true },
+        entry: { key: '7-1-Rx', value: true },
       }),
     )
+  })
+
+  // On and off in quick succession must reach the server in that order, or
+  // the box ends up ticked on the server while the screen shows it clear.
+  it('sends ticks one at a time, in tap order', async () => {
+    let release!: () => void
+    apiPatch.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({}) }))
+    const { result } = renderHook(() => useSetEquipChecks('summer'), { wrapper })
+    result.current.setEntry('7-1-Rx', (old) => !old)
+    result.current.setEntry('7-1-Rx', (old) => !old)
+    await waitFor(() => expect(apiPatch).toHaveBeenCalledTimes(1))
+    expect(apiPatch.mock.calls[0][1]).toMatchObject({ entry: { value: true } })
+    release()
+    await waitFor(() => expect(apiPatch).toHaveBeenCalledTimes(2))
+    expect(apiPatch.mock.calls[1][1]).toMatchObject({ entry: { value: false } })
   })
 
   // Both halves live under one cache key. A writer that dropped the other half
@@ -59,10 +90,10 @@ describe('check writers', () => {
       equipChecks: { '7-1-Rx': true },
     })
     const { result } = renderHook(() => useSetEquipChecks('summer'), { wrapper })
-    result.current.set({ '7-2-Rx': true })
+    result.current.setEntry('7-2-Rx', () => true)
     expect(client.getQueryData(queryKeys.checks('summer'))).toEqual({
       athleteChecks: { '7-1': { corral: true, walkout: false } },
-      equipChecks: { '7-2-Rx': true },
+      equipChecks: { '7-1-Rx': true, '7-2-Rx': true },
     })
   })
 
@@ -71,7 +102,7 @@ describe('check writers', () => {
   it('keeps the tick when the write is refused', async () => {
     apiPatch.mockRejectedValue(new Error('nope'))
     const { result } = renderHook(() => useSetAthleteChecks('summer'), { wrapper })
-    result.current.set({ '7-1': { corral: true, walkout: false } })
+    result.current.setEntry('7-1', () => ({ corral: true, walkout: false }))
     await waitFor(() => expect(apiPatch).toHaveBeenCalled())
     expect(client.getQueryData(queryKeys.checks('summer'))).toEqual({
       athleteChecks: { '7-1': { corral: true, walkout: false } },
@@ -85,7 +116,7 @@ describe('check writers', () => {
   it('reports a refused write so the screen can warn', async () => {
     apiPatch.mockRejectedValue(new Error('nope'))
     const { result } = renderHook(() => useSetAthleteChecks('summer'), { wrapper })
-    result.current.set({ '7-1': { corral: true, walkout: false } })
+    result.current.setEntry('7-1', () => ({ corral: true, walkout: false }))
     await waitFor(() => expect(result.current.error).toBeInstanceOf(Error))
     expect(result.current.error?.message).toBe('nope')
   })

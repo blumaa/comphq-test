@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
-    "@mond-design-system/react": "6.0.0",
-    "@mond-design-system/tokens": "4.1.0",
+    "@mond-design-system/react": "6.4.0",
+    "@mond-design-system/tokens": "4.3.0",
     "@supabase/supabase-js": "^2.112.3",
     "@tanstack/react-query": "^5.101.4",
     "fflate": "^0.8.2",

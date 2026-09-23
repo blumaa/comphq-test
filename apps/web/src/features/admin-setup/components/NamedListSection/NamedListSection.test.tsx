@@ -156,3 +156,35 @@ describe('changing one name', () => {
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith(2))
   })
 })
+
+// COM-110. Import many is offered when the caller can take a list, and hands
+// on only the names not already on it.
+describe('importing many', () => {
+  const onAddMany = vi.fn()
+  beforeEach(() => { onAddMany.mockResolvedValue(undefined) })
+
+  function importList(list: string) {
+    fireEvent.click(screen.getByRole('button', { name: 'Add location' }))
+    fireEvent.click(sheet('Add location').getByRole('radio', { name: 'Import many' }))
+    type('Add location', list)
+    fireEvent.click(sheet('Add location').getByRole('button', { name: 'Import locations' }))
+  }
+
+  it('hands on the new names, skipping ones already listed', async () => {
+    draw({ onAddMany })
+    importList('Parking Lot\nmain floor\nGym')
+    await waitFor(() => expect(onAddMany).toHaveBeenCalledWith(['Parking Lot', 'Gym']))
+  })
+
+  it('is not offered without a list writer', () => {
+    draw()
+    fireEvent.click(screen.getByRole('button', { name: 'Add location' }))
+    expect(sheet('Add location').queryByRole('radio', { name: 'Import many' })).toBeNull()
+  })
+
+  it('is not offered while renaming', () => {
+    draw({ onAddMany })
+    openEditor('Main Floor')
+    expect(sheet('Main Floor').queryByRole('radio', { name: 'Import many' })).toBeNull()
+  })
+})
