@@ -38,8 +38,7 @@ function flatten(list: readonly RouteObject[], prefix = ''): string[] {
   })
 }
 
-// Paths v3 serves that v1 does not, each with the reason it exists — the same
-// shape as check-verbatim.mjs's ADAPTED map, and for the same purpose: the
+// Paths v3 serves that v1 does not, each with the reason it exists. The
 // table may grow, but not silently. A URL is functionality (a QR code printed
 // for a gym display outlives any redesign), so v1's addresses are still all
 // required; this is the list of what was added on top of them.

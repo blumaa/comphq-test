@@ -24,9 +24,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
-      // Deno, with its own `deno check` in `pnpm check:deno`. Half of it is
-      // also byte-identical to v1, so a lint rule here would be a rule asking
-      // for an edit the verbatim check then fails.
+      // Deno, with its own `deno check` in `pnpm check:deno`.
       'supabase/functions/**',
       '**/playwright-report/**',
       '**/test-results/**',
