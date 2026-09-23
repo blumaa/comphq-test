@@ -145,7 +145,7 @@ describe('EquipmentPage', () => {
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', {
         slug: 'summer',
         type: 'equipment',
-        checks: { '7-1-Rx': true },
+        entry: { key: '7-1-Rx', value: true },
       }),
     )
     expect(first.getByRole('checkbox', { name: 'Rx' })).toBeChecked()
@@ -163,7 +163,7 @@ describe('EquipmentPage', () => {
     fireEvent.click(first.getByRole('checkbox', { name: 'No Division' }))
     await waitFor(() =>
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', expect.objectContaining({
-        checks: { '7-1-__none__': true },
+        entry: { key: '7-1-__none__', value: true },
       })),
     )
   })

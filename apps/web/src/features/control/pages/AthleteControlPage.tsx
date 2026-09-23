@@ -117,7 +117,7 @@ export function AthleteControlPage() {
   }
 
   function toggle(key: string, field: keyof RowChecks) {
-    setChecks.set({ ...checks, [key]: { ...EMPTY, ...checks[key], [field]: !checks[key]?.[field] } })
+    setChecks.setEntry(key, (old) => ({ ...EMPTY, ...old, [field]: !old?.[field] }))
   }
 
   function startEditHeatTime(workout: WorkoutData, heatNumber: number) {
