@@ -1,8 +1,9 @@
 import { FileDrop, Text, Textarea } from '@mond-design-system/react'
 import type { ReactNode } from 'react'
 
-// The paste-a-roster-in form both rosters share: a file or a paste, one person
-// per line, and the names in the division or role column that match nothing.
+// The paste-a-list-in form the rosters and the equipment list share: a file or
+// a paste, one entry per line, and the names in the division or role column
+// that match nothing.
 
 interface Props {
   /** The columns, in order: "Name, Bib, Division". */
@@ -18,7 +19,7 @@ interface Props {
   fallback?: ReactNode
 }
 
-export function RosterImport({ format, example, value, onChange, refNoun, unknown, fallback }: Props) {
+export function CsvImport({ format, example, value, onChange, refNoun, unknown, fallback }: Props) {
   const label = `One per line: ${format}`
   return (
     <>
