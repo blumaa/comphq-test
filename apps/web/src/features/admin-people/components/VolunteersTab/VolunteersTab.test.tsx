@@ -122,16 +122,33 @@ describe('adding volunteers', () => {
     expect(onCloseAdd).toHaveBeenCalled()
   })
 
-  it('takes one name per line, comma and all', async () => {
+  // COM-107. A second column names the role; a comma inside a name needs
+  // quotes, as in any CSV.
+  it('gives each imported line the role it names', async () => {
     draw({ adding: true })
     const form = sheet('Add volunteer')
     fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
-    fireEvent.change(form.getByRole('textbox', { name: /One name per line/ }), {
-      target: { value: 'Doe, Jane\n\nLee Lang\n' },
+    fireEvent.change(form.getByLabelText(/^Default role/), { target: { value: '6' } })
+    fireEvent.change(form.getByRole('textbox', { name: /One per line/ }), {
+      target: { value: '"Doe, Jane", judge\n\nLee Lang\n' },
     })
     press('Import volunteers')
     await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
-    expect(apiPost.mock.calls[0][1]).toEqual({ slug: 'rugged-rumble', name: 'Doe, Jane', roleId: null })
+    expect(apiPost.mock.calls[0][1]).toEqual({ slug: 'rugged-rumble', name: 'Doe, Jane', roleId: 5 })
+    expect(apiPost.mock.calls[1][1]).toEqual({ slug: 'rugged-rumble', name: 'Lee Lang', roleId: 6 })
+  })
+
+  it('names a role that does not exist and imports nothing', async () => {
+    draw({ adding: true })
+    const form = sheet('Add volunteer')
+    fireEvent.click(form.getByRole('radio', { name: 'Import many' }))
+    fireEvent.change(form.getByRole('textbox', { name: /One per line/ }), {
+      target: { value: 'Lee Lang, Timer' },
+    })
+    expect(form.getByRole('alert')).toHaveTextContent('No role named Timer')
+    press('Import volunteers')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiPost).not.toHaveBeenCalled()
   })
 })
 
