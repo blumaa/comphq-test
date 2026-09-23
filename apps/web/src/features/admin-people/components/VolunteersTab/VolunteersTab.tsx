@@ -16,8 +16,8 @@ import { DataPanel } from '@/components/DataPanel/DataPanel'
 import { useRoster } from '../../useRoster'
 import type { RunFn, Volunteer, VolunteerRole } from '../../usePeople'
 import { RosterSheet, type AddMode } from '../RosterSheet/RosterSheet'
-import { RosterImport } from '../RosterImport/RosterImport'
-import { parseRosterCsv } from '../../rosterCsv'
+import { CsvImport } from '@/components/CsvImport/CsvImport'
+import { parseLookupCsv } from '@/lib/lookupCsv'
 import styles from './VolunteersTab.module.css'
 
 // v1: the volunteers half of src/app/[slug]/admin/people/page.tsx. The writes
@@ -60,7 +60,7 @@ export function VolunteersTab({
   const [deleting, setDeleting] = useState<Volunteer | null>(null)
 
   const editing = volunteers.find((v) => v.id === roster.editingId) ?? null
-  const imported = parseRosterCsv(bulkText, roles, 1, bulkRoleId ? Number(bulkRoleId) : null)
+  const imported = parseLookupCsv(bulkText, roles, 1, bulkRoleId ? Number(bulkRoleId) : null)
 
   // The editor opens on whoever was tapped, so it opens holding what that
   // volunteer already is rather than what the last one was.
@@ -220,7 +220,7 @@ export function VolunteersTab({
           </>
         }
         bulk={
-          <RosterImport
+          <CsvImport
             format="Name, Role (role optional)"
             example={['Jane Doe, Judge', 'John Smith']}
             value={bulkText}

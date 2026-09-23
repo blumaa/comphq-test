@@ -2,9 +2,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   Badge, Button, Inline, Input, Popover, PopoverBody, PopoverFooter, PopoverHeader,
-  Select, Stack, Text,
+  SegmentedControl, Select, Stack, Text,
 } from '@mond-design-system/react'
 import { apiDel, apiGet, apiPost } from '@/lib/api'
+import { parseLookupCsv } from '@/lib/lookupCsv'
+import { postEach } from '@/lib/postEach'
+import { CsvImport } from '@/components/CsvImport/CsvImport'
 import styles from './WorkoutEquipmentPopover.module.css'
 
 // v1: src/components/workout-detail/WorkoutEquipmentPopover.tsx. Two of v1's
@@ -26,6 +29,10 @@ import styles from './WorkoutEquipmentPopover.module.css'
 // status of its DELETE, so a refused removal still took the row off the list
 // and was back on the next open (defect 22). Both now say what happened and
 // leave the list alone.
+//
+// COM-113: "Import many" takes a pasted or dropped list, Item, Division, one
+// item per line. A division is matched by name, never created, so a list
+// naming one that is not there sends nothing.
 
 type Division = { id: number; name: string }
 type EquipmentItem = { id: number; item: string; divisionId: number | null; division: Division | null }
@@ -33,6 +40,11 @@ type EquipmentItem = { id: number; item: string; divisionId: number | null; divi
 type Props = { workoutId: string; slug: string }
 
 const NO_DIVISION = '__none__'
+
+const MODES = [
+  { value: 'single' as const, label: 'Add one' },
+  { value: 'bulk' as const, label: 'Import many' },
+]
 
 /** Everyone's kit first, then the divisions by name — v1's order. */
 function groupByDivision(equipment: EquipmentItem[]) {
@@ -58,6 +70,9 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
   const [divisions, setDivisions] = useState<Division[]>([])
   const [newItem, setNewItem] = useState('')
   const [newDivisionId, setNewDivisionId] = useState('')
+  const [mode, setMode] = useState<'single' | 'bulk'>('single')
+  const [bulkText, setBulkText] = useState('')
+  const [bulkDivisionId, setBulkDivisionId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -103,6 +118,25 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
     }
   }
 
+  async function importItems(e: FormEvent) {
+    e.preventDefault()
+    const { lines, unknown } = imported
+    if (!lines.length || unknown.length) return
+    setLoading(true)
+    setError(null)
+    try {
+      await postEach(lines, (l) => l.name, (l) =>
+        apiPost(`/api/workouts/${workoutId}/equipment?slug=${slug}`, { item: l.name, divisionId: l.refId }))
+      setBulkText('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      // Whatever landed is on the list, refusals or not.
+      await load()
+      setLoading(false)
+    }
+  }
+
   async function removeItem(id: number) {
     setLoading(true)
     setError(null)
@@ -118,6 +152,22 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
   }
 
   const groups = groupByDivision(equipment)
+  const imported = parseLookupCsv(bulkText, divisions, 1, bulkDivisionId ? Number(bulkDivisionId) : null, 'item')
+
+  const divisionSelect = (value: string, onChange: (v: string) => void, label: string) => (
+    <Select
+      size="sm"
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={styles.division}
+    >
+      <option value="">All Divisions</option>
+      {divisions.map((d) => (
+        <option key={d.id} value={String(d.id)}>{d.name}</option>
+      ))}
+    </Select>
+  )
 
   return (
     <>
@@ -178,35 +228,58 @@ export function WorkoutEquipmentPopover({ workoutId, slug }: Props) {
         </PopoverBody>
 
         <PopoverFooter>
-          <form onSubmit={addItem}>
-            <Stack gap="tight">
-              {error && <Text variant="meta" tone="danger">{error}</Text>}
-              <Input
-                size="sm"
-                aria-label="Equipment item"
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder="e.g. Barbell, 20kg plates…"
-              />
-              <Inline gap="tight" wrap>
-                {divisions.length > 0 && (
-                  <Select
+          <Stack gap="tight">
+            <SegmentedControl
+              size="sm"
+              label="How to add equipment"
+              options={MODES}
+              value={mode}
+              onChange={setMode}
+              fullWidth
+            />
+            {error && <Text variant="meta" tone="danger">{error}</Text>}
+            {mode === 'bulk' ? (
+              <form onSubmit={importItems}>
+                <Stack gap="tight">
+                  <CsvImport
+                    format="Item, Division (division optional)"
+                    example={['Barbell, RX', 'Rower']}
+                    value={bulkText}
+                    onChange={setBulkText}
+                    refNoun="division"
+                    unknown={imported.unknown}
+                    fallback={divisions.length > 0 &&
+                      divisionSelect(bulkDivisionId, setBulkDivisionId, 'Default division (for lines that name none)')}
+                  />
+                  <Inline justify="end">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={loading || !imported.lines.length || imported.unknown.length > 0}
+                    >
+                      Import
+                    </Button>
+                  </Inline>
+                </Stack>
+              </form>
+            ) : (
+              <form onSubmit={addItem}>
+                <Stack gap="tight">
+                  <Input
                     size="sm"
-                    aria-label="Division"
-                    value={newDivisionId}
-                    onChange={(e) => setNewDivisionId(e.target.value)}
-                    className={styles.division}
-                  >
-                    <option value="">All Divisions</option>
-                    {divisions.map((d) => (
-                      <option key={d.id} value={String(d.id)}>{d.name}</option>
-                    ))}
-                  </Select>
-                )}
-                <Button type="submit" size="sm" disabled={loading || !newItem.trim()}>Add</Button>
-              </Inline>
-            </Stack>
-          </form>
+                    aria-label="Equipment item"
+                    value={newItem}
+                    onChange={(e) => setNewItem(e.target.value)}
+                    placeholder="e.g. Barbell, 20kg plates…"
+                  />
+                  <Inline gap="tight" wrap>
+                    {divisions.length > 0 && divisionSelect(newDivisionId, setNewDivisionId, 'Division')}
+                    <Button type="submit" size="sm" disabled={loading || !newItem.trim()}>Add</Button>
+                  </Inline>
+                </Stack>
+              </form>
+            )}
+          </Stack>
         </PopoverFooter>
       </Popover>
     </>

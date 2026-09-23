@@ -19,8 +19,8 @@ import { DataPanel } from '@/components/DataPanel/DataPanel'
 import { useRoster } from '../../useRoster'
 import type { Athlete, Division, RunFn } from '../../usePeople'
 import { RosterSheet, type AddMode } from '../RosterSheet/RosterSheet'
-import { RosterImport } from '../RosterImport/RosterImport'
-import { parseRosterCsv } from '../../rosterCsv'
+import { CsvImport } from '@/components/CsvImport/CsvImport'
+import { parseLookupCsv } from '@/lib/lookupCsv'
 import styles from './AthletesTab.module.css'
 
 // v1: the athletes half of src/app/[slug]/admin/people/page.tsx. The writes are
@@ -65,7 +65,7 @@ export function AthletesTab({
   const [deleting, setDeleting] = useState<Athlete | null>(null)
 
   const editing = athletes.find((a) => a.id === roster.editingId) ?? null
-  const imported = parseRosterCsv(bulkText, divisions, 2, bulkDivisionId ? Number(bulkDivisionId) : null)
+  const imported = parseLookupCsv(bulkText, divisions, 2, bulkDivisionId ? Number(bulkDivisionId) : null)
 
   // The editor opens on whoever was tapped, so it opens holding what that
   // athlete already is rather than what the last one was.
@@ -263,7 +263,7 @@ export function AthletesTab({
           </>
         }
         bulk={
-          <RosterImport
+          <CsvImport
             format="Name, Bib, Division (bib and division optional)"
             example={['Jane Doe, 42, RX', 'John Smith']}
             value={bulkText}
