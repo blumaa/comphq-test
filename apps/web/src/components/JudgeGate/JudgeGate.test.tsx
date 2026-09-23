@@ -118,7 +118,7 @@ describe('JudgeGate', () => {
     apiGet.mockImplementation(() => new Promise(() => {}))
     mount()
     await screen.findByRole('heading', { name: 'Judge Access' })
-    expect(screen.getByRole('button', { name: 'Enter' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Enter' })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it("refuses the competition's password too, until then", async () => {

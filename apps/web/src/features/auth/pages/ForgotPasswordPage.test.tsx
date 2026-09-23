@@ -48,14 +48,18 @@ describe('ForgotPasswordPage', () => {
     expect(screen.getByRole('button', { name: 'Send Reset Link' })).toBeEnabled()
   })
 
-  it('disables the button while the request is in flight', async () => {
+  // MDS 6.1.1: a loading button stays focusable, so it is locked by
+  // aria-disabled and a swallowed click rather than the disabled attribute.
+  it('locks the button while the request is in flight', async () => {
     let release: (value: { error: null }) => void = () => {}
     resetPasswordForEmail.mockReturnValue(new Promise((resolve) => { release = resolve }))
     mount()
     ask()
     const button = screen.getByRole('button', { name: 'Send Reset Link' })
-    await waitFor(() => expect(button).toBeDisabled())
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'))
     expect(button).toHaveAttribute('aria-busy', 'true')
+    fireEvent.click(button)
+    expect(resetPasswordForEmail).toHaveBeenCalledTimes(1)
     release({ error: null })
     expect(await screen.findByText(/Check your inbox/)).toBeInTheDocument()
   })
