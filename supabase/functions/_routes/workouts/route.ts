@@ -35,6 +35,7 @@ export async function POST(req: Request) {
         competitionId: competition.id,
         number: d.number,
         name: d.name,
+        description: d.description ?? null,
         scoreType: d.scoreType,
         lanes: d.lanes,
         heatIntervalSecs: d.heatIntervalSecs,

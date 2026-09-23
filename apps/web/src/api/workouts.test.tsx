@@ -17,6 +17,7 @@ function wrapper({ children }: { children: ReactNode }) {
 const DRAFT = {
   number: 3,
   name: 'Fran',
+  description: null,
   scoreType: 'time',
   lanes: 5,
   heatIntervalSecs: 600,
