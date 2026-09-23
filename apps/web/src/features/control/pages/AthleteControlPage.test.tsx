@@ -367,6 +367,22 @@ describe('AthleteControlPage', () => {
     expect(within(await heatRow(1, 2)).getByText('Overlap')).toBeInTheDocument()
   })
 
+  // COM-117. The badge sits in one cell and is easy to miss on a long table;
+  // the whole row takes the danger tint as well.
+  it('tints a colliding heat red across the row', async () => {
+    serve({
+      showBib: false,
+      workouts: [WORKOUT, { ...WORKOUT, id: 8, number: 2, name: 'Grace' }],
+    })
+    mount()
+    expect((await heatRow(1, 2)).className).toMatch(/danger/)
+  })
+
+  it('leaves a heat that collides with nothing untinted', async () => {
+    mount()
+    expect((await heatRow(1)).className).not.toMatch(/danger/)
+  })
+
   it('says nothing about a heat that collides with nothing', async () => {
     mount()
     expect(within(await heatRow(1)).queryByText('Overlap')).not.toBeInTheDocument()

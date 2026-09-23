@@ -26,7 +26,12 @@ function heatTimes(workout: WorkoutData): number[] {
     .filter((ms): ms is number => ms != null && Number.isFinite(ms))
 }
 
-/** Heat keys — `${workoutId}-${heatNumber}` — whose times collide. */
+/** One heat's key, shared by the conflict set and the check maps. */
+export function heatKey(workoutId: number, heatNumber: number): string {
+  return `${workoutId}-${heatNumber}`
+}
+
+/** Heat keys (see heatKey) whose times collide. */
 export function findConflicts(workouts: WorkoutData[]): Set<string> {
   const flagged = new Set<string>()
 
@@ -50,7 +55,7 @@ export function findConflicts(workouts: WorkoutData[]): Set<string> {
             (prevLatestMs != null && heatMs <= prevLatestMs))) ||
         (corralMs != null && prevLatestWalkoutMs != null && corralMs <= prevLatestWalkoutMs + GAP_MS)
 
-      if (collides) flagged.add(`${workout.id}-${heat.heatNumber}`)
+      if (collides) flagged.add(heatKey(workout.id, heat.heatNumber))
     }
   })
 

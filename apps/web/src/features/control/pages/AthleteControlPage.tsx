@@ -30,7 +30,7 @@ import { fmtHeatTime as fmtMs } from '@/lib/heatTime'
 import { getCorralMs, getHeatMs, getWalkoutMs, type Heat, type OpsData, type WorkoutData } from '@/lib/opsHeats'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { useSetHeatTime } from '../api'
-import { findConflicts } from '../conflicts'
+import { findConflicts, heatKey } from '../conflicts'
 
 // v1: src/components/AthleteControl.tsx, served at /[slug]/control. The desk's
 // own screen — the one page on the public side that asks for a sign-in. It
@@ -164,7 +164,7 @@ export function AthleteControlPage() {
         key: 'heat',
         header: 'Heat',
         cell: (heat) => {
-          const key = `${workout.id}-${heat.heatNumber}`
+          const key = heatKey(workout.id, heat.heatNumber)
           const lanes = [...heat.entries].sort((a, b) => a.lane - b.lane)
           return (
             <Inline gap="tight" wrap>
@@ -175,7 +175,8 @@ export function AthleteControlPage() {
                 </Text>
               )}
               {/* v1 drew a red border around the row and nothing else, which
-                  says nothing to a reader who cannot see it. */}
+                  says nothing to a reader who cannot see it. The row still
+                  takes the danger tint (COM-117); this says why. */}
               {conflicts.has(key) && <Badge tone="danger">Overlap</Badge>}
               {lanes.length > 0 && <LanesButton heatNumber={heat.heatNumber} lanes={lanes} />}
             </Inline>
@@ -186,7 +187,7 @@ export function AthleteControlPage() {
         key: 'corral',
         header: 'Corral',
         cell: (heat) => {
-          const key = `${workout.id}-${heat.heatNumber}`
+          const key = heatKey(workout.id, heat.heatNumber)
           const ms = getHeatMs(workout, heat.heatNumber)
           const c = getChecks(key)
           return (
@@ -208,7 +209,7 @@ export function AthleteControlPage() {
         key: 'walkout',
         header: 'Walk Out',
         cell: (heat) => {
-          const key = `${workout.id}-${heat.heatNumber}`
+          const key = heatKey(workout.id, heat.heatNumber)
           const ms = getHeatMs(workout, heat.heatNumber)
           const c = getChecks(key)
           return (
@@ -342,9 +343,10 @@ export function AthleteControlPage() {
             rowKey={(heat) => String(heat.heatNumber)}
             rowLabel={(heat) => `Heat ${heat.heatNumber}`}
             rowMuted={(heat) => {
-              const c = getChecks(`${workout.id}-${heat.heatNumber}`)
+              const c = getChecks(heatKey(workout.id, heat.heatNumber))
               return c.corral && c.walkout
             }}
+            rowTone={(heat) => (conflicts.has(heatKey(workout.id, heat.heatNumber)) ? 'danger' : undefined)}
             empty="No heats assigned."
           />
         </Stack>
