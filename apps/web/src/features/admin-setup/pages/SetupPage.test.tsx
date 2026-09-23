@@ -262,3 +262,29 @@ it('leaves the refused name in the sheet it was typed in', async () => {
   await screen.findByRole('alert')
   expect(sheet('Add division').getByRole('textbox')).toHaveValue('RX')
 })
+
+// COM-109. A pasted list of divisions reaches the create route once per new
+// name, on the end of the running order.
+async function importMany(noun: string, plural: string, list: string) {
+  fireEvent.click(await screen.findByRole('button', { name: `Add ${noun}` }))
+  fireEvent.click(sheet(`Add ${noun}`).getByRole('radio', { name: 'Import many' }))
+  fireEvent.change(sheet(`Add ${noun}`).getByRole('textbox'), { target: { value: list } })
+  fireEvent.click(sheet(`Add ${noun}`).getByRole('button', { name: `Import ${plural}` }))
+}
+
+it('imports a list of divisions', async () => {
+  mount()
+  await screen.findAllByText('RX')
+  await importMany('division', 'divisions', 'Teens\nRX\nMasters 50+')
+  await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
+  expect(apiPost).toHaveBeenNthCalledWith(1, '/api/divisions', { slug: 'summer', name: 'Teens', order: 6 })
+  expect(apiPost).toHaveBeenNthCalledWith(2, '/api/divisions', { slug: 'summer', name: 'Masters 50+', order: 7 })
+})
+
+it('says so when every listed division already exists', async () => {
+  mount()
+  await screen.findAllByText('RX')
+  await importMany('division', 'divisions', 'RX\nscaled')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Import divisions: Nothing new to import')
+  expect(apiPost).not.toHaveBeenCalled()
+})

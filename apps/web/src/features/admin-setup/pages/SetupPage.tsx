@@ -2,7 +2,7 @@ import { EmptyState, Skeleton, Stack } from '@mond-design-system/react'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import {
-  useAddDivision, useDeleteDivision, useDivisions, useReorderDivisions, useSaveDivision,
+  useAddDivision, useDeleteDivision, useDivisions, useImportDivisions, useReorderDivisions, useSaveDivision,
 } from '@/api/divisions'
 import { useLogo, useRemoveLogo, useUploadLogo } from '@/api/logo'
 import { useSettings, useUpdateSettings, type SettingsPatch } from '@/api/settings'
@@ -49,6 +49,7 @@ export function SetupPage() {
   const logo = useLogo()
 
   const addDivision = useAddDivision(slug)
+  const importDivisions = useImportDivisions(slug)
   const saveDivision = useSaveDivision(slug)
   const reorderDivisions = useReorderDivisions(slug)
   const deleteDivision = useDeleteDivision(slug)
@@ -165,8 +166,9 @@ export function SetupPage() {
             ) : (
               <DivisionsSection
                 rows={rows}
-                busy={addDivision.isPending || saveDivision.isPending}
+                busy={addDivision.isPending || saveDivision.isPending || importDivisions.isPending}
                 onAdd={(input) => run('Add division', addDivision.mutateAsync(input))}
+                onAddMany={(inputs) => run('Import divisions', importDivisions.mutateAsync(inputs))}
                 onSave={(id, input) => run('Save division', saveDivision.mutateAsync({ id, ...input }))}
                 onMove={(from, to) => run('Reorder division', reorderDivisions.mutateAsync({ rows, from, to }))}
                 onDelete={(id) => deleteDivision.mutateAsync(id)}

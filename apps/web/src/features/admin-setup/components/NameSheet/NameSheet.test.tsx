@@ -136,3 +136,55 @@ describe('sending the name', () => {
     expect(submit()).toHaveAttribute('form', 'name-sheet-location')
   })
 })
+
+// COM-109 / COM-110. Given onSubmitMany, adding offers a pasted or dropped
+// list as well as one name. Editing never does: a rename is one name.
+describe('importing many', () => {
+  const onSubmitMany = vi.fn()
+  const importMany = () => fireEvent.click(screen.getByRole('radio', { name: 'Import many' }))
+  const list = () => screen.getByRole('textbox', { name: 'Locations, one per line' })
+  const importButton = () => screen.getByRole('button', { name: 'Import locations' })
+
+  beforeEach(() => { onSubmitMany.mockResolvedValue(undefined) })
+
+  it('is not offered without onSubmitMany', () => {
+    draw()
+    expect(screen.queryByRole('radio', { name: 'Import many' })).not.toBeInTheDocument()
+  })
+
+  it('sends the listed names, header and repeats dropped', async () => {
+    draw({ onSubmitMany, plural: 'locations' })
+    importMany()
+    fireEvent.change(list(), { target: { value: 'Location\nMain Floor\nTurf\nmain floor' } })
+    fireEvent.click(importButton())
+    await waitFor(() => expect(onSubmitMany).toHaveBeenCalledWith(['Main Floor', 'Turf']))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('has nothing to import until a name is listed', () => {
+    draw({ onSubmitMany, plural: 'locations' })
+    importMany()
+    expect(importButton()).toBeDisabled()
+  })
+
+  it('fills the list from a dropped file', async () => {
+    draw({ onSubmitMany, plural: 'locations' })
+    importMany()
+    const file = new File(['Main Floor\nTurf'], 'locations.csv', { type: 'text/csv' })
+    const input = document.querySelector('input[type=file]') as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [file] })
+    fireEvent.change(input)
+    await waitFor(() => expect(list()).toHaveValue('Main Floor\nTurf'))
+  })
+
+  it('keeps the list, and stays open, when the import is refused', async () => {
+    onSubmitMany.mockRejectedValue(new Error('nope'))
+    draw({ onSubmitMany, plural: 'locations' })
+    importMany()
+    fireEvent.change(list(), { target: { value: 'Turf' } })
+    fireEvent.click(importButton())
+    await waitFor(() => expect(onSubmitMany).toHaveBeenCalled())
+    expect(list()).toHaveValue('Turf')
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})

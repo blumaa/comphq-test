@@ -10,6 +10,7 @@ const onAdd = vi.fn()
 const onSave = vi.fn()
 const onMove = vi.fn()
 const onDelete = vi.fn()
+const onAddMany = vi.fn()
 
 const RX = { id: 1, name: 'RX', order: 1 }
 const SCALED = { id: 2, name: 'Scaled', order: 2 }
@@ -42,6 +43,7 @@ beforeEach(() => {
   onSave.mockResolvedValue(undefined)
   onMove.mockResolvedValue(undefined)
   onDelete.mockResolvedValue(undefined)
+  onAddMany.mockResolvedValue(undefined)
 })
 
 describe('the list it draws', () => {
@@ -167,5 +169,36 @@ describe('moving one division', () => {
     draw()
     fireEvent.change(screen.getByRole('combobox', { name: 'Position of RX' }), { target: { value: '1' } })
     expect(onMove).not.toHaveBeenCalled()
+  })
+})
+
+// COM-109. A pasted list goes on the end in the order it was pasted, and a
+// division already on the list is not sent again.
+describe('importing divisions', () => {
+  function importList(value: string) {
+    draw({ onAddMany })
+    fireEvent.click(screen.getByRole('button', { name: 'Add division' }))
+    fireEvent.click(sheet('Add division').getByRole('radio', { name: 'Import many' }))
+    fireEvent.change(sheet('Add division').getByRole('textbox', { name: 'Divisions, one per line' }), { target: { value } })
+    fireEvent.click(sheet('Add division').getByRole('button', { name: 'Import divisions' }))
+  }
+
+  it('adds them after the last division, in pasted order', async () => {
+    importList('Teens\nMasters 50+')
+    await waitFor(() => expect(onAddMany).toHaveBeenCalledWith([
+      { name: 'Teens', order: 6 },
+      { name: 'Masters 50+', order: 7 },
+    ]))
+  })
+
+  it('leaves out a division that already exists, whatever its case', async () => {
+    importList('rx\nTeens')
+    await waitFor(() => expect(onAddMany).toHaveBeenCalledWith([{ name: 'Teens', order: 6 }]))
+  })
+
+  it('is not offered while renaming', () => {
+    draw({ onAddMany })
+    openEditor('RX')
+    expect(sheet('RX').queryByRole('radio', { name: 'Import many' })).not.toBeInTheDocument()
   })
 })

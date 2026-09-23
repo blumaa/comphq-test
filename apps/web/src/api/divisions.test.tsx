@@ -7,6 +7,7 @@ import {
   useAddDivision,
   useDeleteDivision,
   useDivisions,
+  useImportDivisions,
   useSaveDivision,
   useReorderDivisions,
 } from './divisions'
@@ -163,5 +164,29 @@ describe('writing a division', () => {
     await act(() => result.current.mutateAsync(4))
     expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.athletes('summer') })
     expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.leaderboard('summer') })
+  })
+})
+
+// COM-109. A pasted list is one write per division, in list order, each with
+// the order it was handed. A refusal does not stop the rest, and the list is
+// re-read either way so what did land shows.
+describe('importing divisions', () => {
+  it('adds each division in turn, with its own order', async () => {
+    const { result } = renderHook(() => useImportDivisions('summer'), { wrapper })
+    await act(() => result.current.mutateAsync([{ name: 'RX', order: 4 }, { name: 'Scaled', order: 5 }]))
+    expect(apiPost.mock.calls).toEqual([
+      ['/api/divisions', { slug: 'summer', name: 'RX', order: 4 }],
+      ['/api/divisions', { slug: 'summer', name: 'Scaled', order: 5 }],
+    ])
+  })
+
+  it('re-reads the list even when one is refused', async () => {
+    apiPost.mockRejectedValueOnce(new Error('exists'))
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useImportDivisions('summer'), { wrapper })
+    await act(() => expect(result.current.mutateAsync([{ name: 'RX', order: 4 }, { name: 'Scaled', order: 5 }]))
+      .rejects.toThrow('Could not add "RX" (exists)'))
+    expect(apiPost).toHaveBeenCalledTimes(2)
+    expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.divisions('summer') })
   })
 })
