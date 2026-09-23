@@ -11,7 +11,6 @@ import {
   Skeleton,
   Stack,
   Text,
-  Textarea,
 } from '@mond-design-system/react'
 import type { DataColumn } from '@mond-design-system/react'
 import { useEffect, useState } from 'react'
@@ -20,6 +19,8 @@ import { DataPanel } from '@/components/DataPanel/DataPanel'
 import { useRoster } from '../../useRoster'
 import type { Athlete, Division, RunFn } from '../../usePeople'
 import { RosterSheet, type AddMode } from '../RosterSheet/RosterSheet'
+import { RosterImport } from '../RosterImport/RosterImport'
+import { parseRosterCsv } from '../../rosterCsv'
 import styles from './AthletesTab.module.css'
 
 // v1: the athletes half of src/app/[slug]/admin/people/page.tsx. The writes are
@@ -64,6 +65,7 @@ export function AthletesTab({
   const [deleting, setDeleting] = useState<Athlete | null>(null)
 
   const editing = athletes.find((a) => a.id === roster.editingId) ?? null
+  const imported = parseRosterCsv(bulkText, divisions, 2, bulkDivisionId ? Number(bulkDivisionId) : null)
 
   // The editor opens on whoever was tapped, so it opens holding what that
   // athlete already is rather than what the last one was.
@@ -102,21 +104,15 @@ export function AthletesTab({
     void roster.add(body(), close)
   }
 
+  // COM-108: Name, Bib, Division. A division is matched by name, never
+  // created, so a list naming one that is not there sends nothing.
   function importMany() {
-    const lines = bulkText.split('\n').map((l) => l.trim()).filter(Boolean)
-    if (!lines.length) return
-    const entries = lines.flatMap((line) => {
-      const [athleteName, bibNumber] = line.split(',').map((s) => s.trim())
-      if (!athleteName) return []
-      return [{
-        name: athleteName,
-        body: {
-          name: athleteName,
-          bibNumber: bibNumber || null,
-          divisionId: bulkDivisionId ? Number(bulkDivisionId) : null,
-        },
-      }]
-    })
+    const { lines, unknown } = imported
+    if (!lines.length || unknown.length) return
+    const entries = lines.map(({ name, cells, refId }) => ({
+      name,
+      body: { name, bibNumber: cells[1] || null, divisionId: refId },
+    }))
     void roster.bulk(entries, () => { setBulkText(''); close() })
   }
 
@@ -267,20 +263,19 @@ export function AthletesTab({
           </>
         }
         bulk={
-          <>
-            {divisions.length > 0 && (
-              <Field label="Division (applies to all imported athletes)">
+          <RosterImport
+            format="Name, Bib, Division (bib and division optional)"
+            example={['Jane Doe, 42, RX', 'John Smith']}
+            value={bulkText}
+            onChange={setBulkText}
+            refNoun="division"
+            unknown={imported.unknown}
+            fallback={divisions.length > 0 && (
+              <Field label="Default division (for lines that name none)">
                 {divisionSelect(bulkDivisionId, setBulkDivisionId)}
               </Field>
             )}
-            <Textarea
-              rows={8}
-              aria-label="One per line: Name, Bib (bib optional)"
-              placeholder={'One per line: Name, Bib (bib optional)\nJane Doe, 42\nJohn Smith'}
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-            />
-          </>
+          />
         }
         extra={editing && (
           /* The sheet's stack stretches its children; a button is not a
