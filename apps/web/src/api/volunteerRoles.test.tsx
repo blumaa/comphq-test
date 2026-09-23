@@ -6,6 +6,7 @@ import { queryKeys } from './queryKeys'
 import {
   useAddVolunteerRole,
   useDeleteVolunteerRole,
+  useImportVolunteerRoles,
   useSaveVolunteerRole,
   useVolunteerRoles,
 } from './volunteerRoles'
@@ -67,6 +68,29 @@ describe('writing a volunteer role', () => {
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useAddVolunteerRole('summer'), { wrapper })
     await act(() => result.current.mutateAsync('Timer'))
+    expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.volunteerRoles('summer') })
+  })
+})
+
+// COM-110. A pasted list of roles is one POST per name, and a refusal still
+// re-reads the list so the ones that landed show.
+describe('importing volunteer roles', () => {
+  it('adds each role in turn', async () => {
+    const { result } = renderHook(() => useImportVolunteerRoles('summer'), { wrapper })
+    await act(() => result.current.mutateAsync(['Judge', 'Timer']))
+    expect(apiPost.mock.calls).toEqual([
+      ['/api/volunteer-roles', { slug: 'summer', name: 'Judge' }],
+      ['/api/volunteer-roles', { slug: 'summer', name: 'Timer' }],
+    ])
+  })
+
+  it('re-reads the list even when one is refused', async () => {
+    apiPost.mockRejectedValueOnce(new Error('exists'))
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useImportVolunteerRoles('summer'), { wrapper })
+    await act(() => expect(result.current.mutateAsync(['Judge', 'Timer']))
+      .rejects.toThrow('Could not add "Judge" (exists)'))
+    expect(apiPost).toHaveBeenCalledTimes(2)
     expect(spy).toHaveBeenCalledWith({ queryKey: queryKeys.volunteerRoles('summer') })
   })
 })

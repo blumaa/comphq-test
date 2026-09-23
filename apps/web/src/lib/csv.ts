@@ -41,3 +41,9 @@ export function parseNameList(text: string, header: string): string[] {
   }
   return names
 }
+
+/** The names not already in `known`, compared case-insensitively. */
+export function withoutKnown(names: string[], known: string[]): string[] {
+  const have = new Set(known.map((k) => k.toLowerCase()))
+  return names.filter((name) => !have.has(name.toLowerCase()))
+}

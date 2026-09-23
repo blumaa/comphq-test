@@ -2,6 +2,7 @@ import { Button, ConfirmDialog, DataTable, EmptyState, Text } from '@mond-design
 import type { DataColumn } from '@mond-design-system/react'
 import { useState } from 'react'
 import { DataPanel } from '@/components/DataPanel/DataPanel'
+import { withoutKnown } from '@/lib/csv'
 import { NameSheet } from '../NameSheet/NameSheet'
 
 // v1 wrote this section twice in src/app/[slug]/admin/setup/page.tsx — once for
@@ -35,17 +36,21 @@ interface Props {
   rows: NamedRow[]
   busy?: boolean
   onAdd: (name: string) => Promise<unknown>
+  /** Offers "Import many" on the add sheet. Gets only names not already listed. */
+  onAddMany?: (names: string[]) => Promise<unknown>
   onSave: (id: number, name: string) => Promise<unknown>
   onDelete: (id: number) => Promise<unknown>
 }
 
 export function NamedListSection({
   title, description, columnHeader, noun, emptyTitle, emptyDescription, placeholder,
-  deleteDescription, rows, busy, onAdd, onSave, onDelete,
+  deleteDescription, rows, busy, onAdd, onAddMany, onSave, onDelete,
 }: Props) {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<NamedRow | null>(null)
   const [deleting, setDeleting] = useState<NamedRow | null>(null)
+
+  const addMany = onAddMany && ((names: string[]) => onAddMany(withoutKnown(names, rows.map((r) => r.name))))
 
   const columns: DataColumn<NamedRow>[] = [
     {
@@ -99,6 +104,8 @@ export function NamedListSection({
         busy={busy}
         onClose={() => { setAdding(false); setEditing(null) }}
         onSubmit={(name) => editing ? onSave(editing.id, name) : onAdd(name)}
+        onSubmitMany={editing ? undefined : addMany}
+        plural={`${noun}s`}
       />
 
       <ConfirmDialog

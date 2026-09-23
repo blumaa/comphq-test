@@ -288,3 +288,13 @@ it('says so when every listed division already exists', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Import divisions: Nothing new to import')
   expect(apiPost).not.toHaveBeenCalled()
 })
+
+// COM-110. Same for roles: one create per name not already on the list.
+it('imports a list of volunteer roles', async () => {
+  mount()
+  await screen.findAllByText('RX')
+  await importMany('volunteer role', 'volunteer roles', 'Role\nTimer\njudge\nScorekeeper')
+  await waitFor(() => expect(apiPost).toHaveBeenCalledTimes(2))
+  expect(apiPost).toHaveBeenNthCalledWith(1, '/api/volunteer-roles', { slug: 'summer', name: 'Timer' })
+  expect(apiPost).toHaveBeenNthCalledWith(2, '/api/volunteer-roles', { slug: 'summer', name: 'Scorekeeper' })
+})

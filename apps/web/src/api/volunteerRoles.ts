@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiDel, apiGet, apiPost, apiPut } from '@/lib/api'
+import { postEach } from '@/lib/postEach'
 import { queryKeys } from './queryKeys'
 
 // What a volunteer can be at this competition. Defined on the setup screen;
@@ -38,4 +39,16 @@ export function useSaveVolunteerRole(slug: string) {
 export function useDeleteVolunteerRole(slug: string) {
   return useRoleWriter(slug, 'Role deleted', (id: number) =>
     apiDel(`/api/volunteer-roles/${id}?slug=${slug}`))
+}
+
+/** One POST per name. Re-reads on settle, so a partial import still shows
+    the roles that landed. */
+export function useImportVolunteerRoles(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (names: string[]) =>
+      postEach(names, (name) => name, (name) => apiPost('/api/volunteer-roles', { slug, name })),
+    meta: { success: 'Roles imported' },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.volunteerRoles(slug) }),
+  })
 }
