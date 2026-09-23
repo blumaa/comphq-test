@@ -27,7 +27,7 @@ import { LiveStatus } from '@/components/LiveStatus/LiveStatus'
 import { Notice } from '@/components/Notice/Notice'
 import { OperatorShell } from '@/layouts/OperatorShell'
 import { fmtHeatTime as fmtMs } from '@/lib/heatTime'
-import { getHeatMs, type Heat, type OpsData, type WorkoutData } from '@/lib/opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type Heat, type OpsData, type WorkoutData } from '@/lib/opsHeats'
 import { useRealtimeInvalidation } from '@/lib/useRealtimeInvalidation'
 import { useSetHeatTime } from '../api'
 import { findConflicts } from '../conflicts'
@@ -198,7 +198,7 @@ export function AthleteControlPage() {
                 onChange={() => toggle(key, 'corral')}
               />
               <Text as="span" variant="meta" tone="warning">
-                {tickTime(ms != null ? ms - workout.callTimeSecs * 1000 : null, c.corral)}
+                {tickTime(getCorralMs(workout, ms), c.corral)}
               </Text>
             </Inline>
           )
@@ -220,7 +220,7 @@ export function AthleteControlPage() {
                 onChange={() => toggle(key, 'walkout')}
               />
               <Text as="span" variant="meta" tone="accent">
-                {tickTime(ms != null ? ms - workout.walkoutTimeSecs * 1000 : null, c.walkout)}
+                {tickTime(getWalkoutMs(workout, ms), c.walkout)}
               </Text>
             </Inline>
           )

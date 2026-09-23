@@ -53,3 +53,14 @@ export function getHeatMs(workout: WorkoutData, heatNumber: number): number | nu
     workout.timeBetweenHeatsSecs,
   )
 }
+
+// When the athletes of a heat are called to the corral and walked out: fixed
+// offsets back from the heat start. One definition, so every screen that
+// prints them agrees.
+export function getCorralMs(workout: Pick<WorkoutData, 'callTimeSecs'>, startMs: number | null): number | null {
+  return startMs == null ? null : startMs - workout.callTimeSecs * 1000
+}
+
+export function getWalkoutMs(workout: Pick<WorkoutData, 'walkoutTimeSecs'>, startMs: number | null): number | null {
+  return startMs == null ? null : startMs - workout.walkoutTimeSecs * 1000
+}
