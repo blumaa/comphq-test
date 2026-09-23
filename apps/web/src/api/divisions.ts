@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiDel, apiGet, apiPost, apiPut } from '@/lib/api'
+import { postEach } from '@/lib/postEach'
 import { queryKeys } from './queryKeys'
 
 // The competition's divisions. Written on the setup screen and read almost
@@ -50,6 +51,18 @@ function dealtOrders(rows: Division[], from: number, to: number): Division[] {
   const next = rows.slice()
   next.splice(to, 0, ...next.splice(from, 1))
   return next.map((division, i) => ({ ...division, order: rows[i].order }))
+}
+
+/** A pasted list, one write per division in list order (COM-109). The list is
+    re-read on a refusal too, so the divisions that did land show. */
+export function useImportDivisions(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (inputs: { name: string; order: number }[]) =>
+      postEach(inputs, (d) => d.name, (d) => apiPost('/api/divisions', { slug, ...d })),
+    meta: { success: 'Divisions imported' },
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.divisions(slug) }),
+  })
 }
 
 /** Moving a division to a position is a move, not an exchange.
