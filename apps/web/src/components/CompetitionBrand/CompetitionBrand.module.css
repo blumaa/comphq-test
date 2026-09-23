@@ -5,21 +5,12 @@
   color: inherit;
 }
 
-/* The wordmark sits underneath the mark rather than beside it, so the two
-   read as one stacked identity instead of two misaligned neighbours. */
+/* Horizontal lockup, 32px tall: ~172px wide, inside the 56px bar and the
+   240px sidebar. Brand minimum is 88px wide. An uploaded logo keeps its own
+   proportion inside 40px. */
 .lockup {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* The bar's height is fixed by --mds-header-h (56px), so neither mark can
-   change it — but content taller than the bar overflows it. The stack fills
-   the bar: 40px of artwork plus the tight label line beneath comes to ~55px.
-   An uploaded logo keeps its own proportion inside the same 40px. */
-.mark {
-  width: var(--mds-space-9);
-  height: var(--mds-space-9);
+  display: block;
+  height: var(--mds-space-8);
 }
 
 .logo {

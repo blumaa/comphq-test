@@ -30,6 +30,11 @@
 //      A misspelt token fails nowhere: the declaration is dropped and the
 //      element keeps whatever it would have had, which is a layout nobody
 //      chose and no error to find it by.
+//   7. The brand palette is declared once, as --comphq-* primitives in the
+//      brand file, and the --mds-* tokens point at it. A primitive is a
+//      swatch, not a role: it does not flip with the theme, and no app
+//      stylesheet reads one — components ask for a role, the brand file
+//      decides which swatch fills it.
 
 import { createRequire } from 'node:module'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -113,6 +118,14 @@ for (const token of declared(dark)) {
   if (!lightTokens.has(token)) note(BRAND, `${token} is re-pointed for dark but never declared for light`)
 }
 
+// ─── 7. Palette primitives ──────────────────────────────────────────────
+const PALETTE = /--comphq-[a-z0-9-]+/
+const palette = (text) => [...text.matchAll(/^\s*(--comphq-[a-z0-9-]+):/gm)].map((m) => m[1])
+if (palette(light).length === 0) note(BRAND, 'declares no --comphq-* palette — the --mds-* tokens have no swatches to point at')
+for (const token of palette(dark)) {
+  note(BRAND, `${token} is re-declared for dark — a swatch does not flip, re-point the --mds-* token instead`)
+}
+
 // ─── 3. The contrast contract ───────────────────────────────────────────
 // The package ships the pairs and the ratios it holds its own defaults to.
 // A brand that re-points every one of those tokens has to be re-proved, not
@@ -120,7 +133,7 @@ for (const token of declared(dark)) {
 
 function values(text) {
   const out = {}
-  for (const m of text.matchAll(/^\s*(--mds-[a-z0-9-]+):\s*([^;]+);/gm)) out[m[1]] = m[2].trim()
+  for (const m of text.matchAll(/^\s*(--(?:mds|comphq)-[a-z0-9-]+):\s*([^;]+);/gm)) out[m[1]] = m[2].trim()
   return out
 }
 
@@ -129,7 +142,7 @@ function values(text) {
 function resolve(token, table, seen = new Set()) {
   const raw = table[token]
   if (raw === undefined || seen.has(token)) return undefined
-  const alias = raw.match(/^var\((--mds-[a-z0-9-]+)\)$/)
+  const alias = raw.match(/^var\((--(?:mds|comphq)-[a-z0-9-]+)\)$/)
   if (!alias) return raw
   return resolve(alias[1], table, new Set([...seen, token]))
 }
@@ -215,7 +228,8 @@ if (!existsSync(htmlPath)) {
         continue
       }
       const want = resolve('--mds-surface-page', themes[theme])
-      if (value.trim() !== want) {
+      // Hex is case-insensitive; the palette keeps the export's upper case.
+      if (value.trim().toLowerCase() !== want?.toLowerCase()) {
         note(HTML, `${selector} paints ${value.trim()}, but --mds-surface-page in ${theme} is ${want}`)
       }
     }
@@ -266,6 +280,7 @@ for (const cssRoot of CSS_ROOTS) {
         return
       }
       if (HEX.test(code)) note(at, 'raw hex — use a --mds-* token')
+      if (PALETTE.test(code)) note(at, 'palette swatch outside the brand file — use the --mds-* role it fills')
       if (RGB.test(code)) note(at, 'raw colour function — use a --mds-* token')
       // A prelude may carry a breakpoint and nothing else, so the lengths
       // are stripped one at a time and only the ones that are not a
@@ -332,5 +347,6 @@ if (problems.length) {
 console.log(`tokens:   ${template.colour.length} re-declared, 0 geometry, ${contract.contrast.length} contrast pairs hold in both themes, 0 raw values`)
 console.log('          index.html pre-paints --mds-surface-page')
 console.log(`          @media may break at ${BREAKPOINTS.join(', ')}`)
+console.log(`          ${palette(light).length} palette swatches, read only by the brand file`)
 console.log(`          ${ART.length} art file(s) exempted`)
 console.log(`          ${knownProperties.size} custom properties declared, every var() reference resolves`)

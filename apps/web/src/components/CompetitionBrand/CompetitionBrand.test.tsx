@@ -11,7 +11,7 @@ function mount(children = <CompetitionBrand />) {
   return renderRoutes(<Route path="/" element={children} />)
 }
 
-const lockup = () => screen.getByText('comp').parentElement
+const lockup = () => screen.getByRole('img', { name: 'CompHQ' })
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -37,14 +37,14 @@ describe('CompetitionBrand', () => {
 
   it('keeps the lockup when the competition has uploaded nothing', async () => {
     mount()
-    await screen.findByText('hq')
+    await screen.findByRole('img', { name: 'CompHQ' })
     expect(screen.queryByRole('img', { name: 'Competition logo' })).not.toBeInTheDocument()
   })
 
   it('keeps the lockup when the read fails outright', async () => {
     apiGet.mockRejectedValue(new Error('logo is down'))
     mount()
-    await screen.findByText('hq')
+    await screen.findByRole('img', { name: 'CompHQ' })
     expect(screen.queryByRole('img', { name: 'Competition logo' })).not.toBeInTheDocument()
   })
 
@@ -79,7 +79,7 @@ describe('CompetitionBrand', () => {
   // again. It is one shared query now, whoever draws it.
   it('asks for the logo once however many bars draw it', async () => {
     mount(<><CompetitionBrand /><CompetitionBrand /></>)
-    await screen.findAllByText('hq')
+    await screen.findAllByRole('img', { name: 'CompHQ' })
     expect(apiGet.mock.calls.filter((c) => c[0] === '/api/logo')).toHaveLength(1)
   })
 })

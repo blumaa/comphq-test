@@ -12,8 +12,7 @@ import {
 } from '@mond-design-system/react'
 import { useCompetitions } from '@/api/competitions'
 import { Centered } from '@/components/Centered/Centered'
-import { ComphqMark } from '@/components/ComphqMark/ComphqMark'
-import { ComphqWordmark } from '@/components/ComphqWordmark/ComphqWordmark'
+import { ComphqLogo } from '@/components/ComphqLogo/ComphqLogo'
 import { RouterAnchor } from '@/components/RouterAnchor'
 import styles from './WelcomePage.module.css'
 
@@ -33,10 +32,11 @@ export function WelcomePage() {
     <Centered>
       <Stack gap="section" className={styles.column}>
         <Stack gap="tight" align="center">
-          <div className={styles.mark}>
-            <ComphqMark />
-          </div>
-          <Heading level={1}><ComphqWordmark /></Heading>
+          <Heading level={1}>
+            <span className={styles.logo}>
+              <ComphqLogo variant="stacked" />
+            </span>
+          </Heading>
           <Text variant="meta" tone="muted">Competition management</Text>
         </Stack>
 
