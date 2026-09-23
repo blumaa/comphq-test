@@ -3,6 +3,7 @@
     "@/lib/audit": "./_shared/audit.ts",
     "@/lib/auth-competition": "./_shared/auth-competition.ts",
     "@/lib/competition": "./_shared/competition.ts",
+    "@/lib/csv": "./_shared/csv.ts",
     "@/lib/datetime": "./_shared/datetime.ts",
     "@/lib/db": "./_shared/db.ts",
     "@/lib/embeds": "./_shared/embeds.ts",
