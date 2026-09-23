@@ -164,7 +164,7 @@ function EquipmentControl({ slug }: { slug: string }) {
 
   function toggle(workoutId: number, heatNumber: number, divisionName: string | null) {
     const key = checkKey(workoutId, heatNumber, divisionName)
-    setEquipChecks.set({ ...equipChecks, [key]: !equipChecks[key] })
+    setEquipChecks.setEntry(key, (old) => !old)
   }
 
   // A workout whose heats have all run has nothing left to set up.

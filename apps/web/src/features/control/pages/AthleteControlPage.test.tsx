@@ -157,14 +157,14 @@ describe('AthleteControlPage', () => {
     expect(within(await heatRow(1)).queryByText('Complete')).not.toBeInTheDocument()
   })
 
-  it('sends the whole check record when a corral is ticked', async () => {
+  it('sends the heat\'s check record when a corral is ticked', async () => {
     mount()
     fireEvent.click(within(await heatRow(1)).getByRole('checkbox', { name: 'Corral heat 1' }))
     await waitFor(() =>
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', {
         slug: 'summer',
         type: 'athlete',
-        checks: { '7-1': { corral: true, walkout: false } },
+        entry: { key: '7-1', value: { corral: true, walkout: false } },
       }),
     )
   })
@@ -177,7 +177,7 @@ describe('AthleteControlPage', () => {
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', {
         slug: 'summer',
         type: 'athlete',
-        checks: { '7-1': { corral: true, walkout: true } },
+        entry: { key: '7-1', value: { corral: true, walkout: true } },
       }),
     )
   })
@@ -190,7 +190,7 @@ describe('AthleteControlPage', () => {
       expect(apiPatch).toHaveBeenCalledWith('/api/checks', {
         slug: 'summer',
         type: 'athlete',
-        checks: { '7-1': { corral: false, walkout: true } },
+        entry: { key: '7-1', value: { corral: false, walkout: true } },
       }),
     )
   })
