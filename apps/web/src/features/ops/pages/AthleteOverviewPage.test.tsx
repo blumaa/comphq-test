@@ -227,6 +227,16 @@ describe('AthleteOverviewPage', () => {
     expect(stops[1]).toHaveTextContent('Workout 3 · Helen')
   })
 
+  // COM-115
+  it('shows when an athlete is due in the corral and at walk out', async () => {
+    mount()
+    await screen.findAllByText('Ada Ant')
+    search('ada')
+    const stops = await timeline('Ada Ant')
+    expect(stops[0]).toHaveTextContent(`Corral ${fmtHeatTime(START - 300_000)}`)
+    expect(stops[0]).toHaveTextContent(`Walk out ${fmtHeatTime(START - 120_000)}`)
+  })
+
   it('names the athlete by division and bib', async () => {
     mount()
     await screen.findAllByText('Ada Ant')

@@ -1,4 +1,4 @@
-import { getHeatMs, type WorkoutData } from '@/lib/opsHeats'
+import { getCorralMs, getHeatMs, getWalkoutMs, type WorkoutData } from '@/lib/opsHeats'
 
 // v1: the inline `conflict` expression in AthleteControl.tsx, lifted out whole.
 // It answers one question — is this heat about to collide with the workout
@@ -39,11 +39,11 @@ export function findConflicts(workouts: WorkoutData[]): Set<string> {
     const nextEarliestMs = nextTimes.length > 0 ? Math.min(...nextTimes) : null
     const prevLatestMs = prevTimes.length > 0 ? Math.max(...prevTimes) : null
     const prevLatestWalkoutMs =
-      prev && prevLatestMs != null ? prevLatestMs - prev.walkoutTimeSecs * 1000 : null
+      prev ? getWalkoutMs(prev, prevLatestMs) : null
 
     for (const heat of workout.heats) {
       const heatMs = getHeatMs(workout, heat.heatNumber)
-      const corralMs = heatMs != null ? heatMs - workout.callTimeSecs * 1000 : null
+      const corralMs = getCorralMs(workout, heatMs)
       const collides =
         (heatMs != null &&
           ((nextEarliestMs != null && heatMs >= nextEarliestMs) ||

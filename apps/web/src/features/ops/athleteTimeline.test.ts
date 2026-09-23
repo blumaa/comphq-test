@@ -89,6 +89,14 @@ describe('athletesIn', () => {
   })
 
   // An unscheduled workout has no clock to sort by, so it is not next.
+  // COM-115. Corral and walk out are what an athlete has to be on time for.
+  it('carries the corral and walk out times of each stop', () => {
+    const [ada] = athletesIn(OPS)
+    const start = Date.parse('2026-08-26T08:00:00.000Z')
+    expect(ada.stops[0]).toMatchObject({ corralMs: start - 300_000, walkoutMs: start - 120_000 })
+    expect(ada.stops.at(-1)).toMatchObject({ corralMs: null, walkoutMs: null })
+  })
+
   it('puts a heat with no start time after the ones that have one', () => {
     const [ada] = athletesIn(OPS)
     expect(ada.stops.at(-1)).toMatchObject({ workoutName: 'Helen', startMs: null })

@@ -53,16 +53,25 @@ function Timeline({ athlete }: { athlete: Athlete }) {
               {stop.locationName && (
                 <Text as="span" variant="meta" tone="muted">{stop.locationName}</Text>
               )}
-              {/* A score is only the truth once the heat is over: until then it
-                  is whatever the judge has typed so far. */}
-              {stop.isComplete && stop.scoreDisplay && (
-                <Text as="span" variant="meta">{stop.scoreDisplay}</Text>
-              )}
-              {stop.isComplete && stop.tiebreakDisplay && (
-                <Text as="span" variant="meta" tone="muted">TB {stop.tiebreakDisplay}</Text>
-              )}
-              {stop.isComplete && <Badge tone="success">Done</Badge>}
             </Inline>
+            {stop.corralMs != null && stop.walkoutMs != null && (
+              <Text as="span" variant="meta" tone="muted">
+                Corral {fmtHeatTime(stop.corralMs)} · Walk out {fmtHeatTime(stop.walkoutMs)}
+              </Text>
+            )}
+            {/* A score is only the truth once the heat is over: until then it
+                is whatever the judge has typed so far. */}
+            {stop.isComplete && (
+              <Inline gap="tight" align="center" wrap>
+                {stop.scoreDisplay && (
+                  <Text as="span" variant="meta">{stop.scoreDisplay}</Text>
+                )}
+                {stop.tiebreakDisplay && (
+                  <Text as="span" variant="meta" tone="muted">TB {stop.tiebreakDisplay}</Text>
+                )}
+                <Badge tone="success">Done</Badge>
+              </Inline>
+            )}
           </Stack>
         </li>
       ))}
