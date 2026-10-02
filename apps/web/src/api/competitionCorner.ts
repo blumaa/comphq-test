@@ -1,0 +1,84 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiPost } from '@/lib/api'
+import { fetchCcEvent, parseEventUrl, type CcRawEvent } from '@/lib/competitionCorner'
+import { errorMessage } from '@/lib/errorMessage'
+import { HttpError } from '@/lib/http'
+import type { ScoreTypeValue } from '@/lib/scoreTypes'
+import { queryKeys } from './queryKeys'
+
+// The Competition Corner import on the setup screen. Preview reads the event
+// in the browser (see lib/competitionCorner) and posts it; the route lists what
+// it would change. Apply posts the same event with the changes the admin kept.
+// Apply rebuilds the list on the server and refuses (409) when it no longer
+// matches `version`.
+
+export type CcSource = { url: string; tz: string; mergePartB: boolean }
+
+/** What preview posted, so apply posts the same event the admin reviewed. */
+export type CcRequest = { tz: string; mergePartB: boolean; event: CcRawEvent }
+
+/** Mirrors `Change` in supabase/functions/_shared/competitionCorner/diff.ts. */
+export type CcChange = {
+  key: string
+  entity: 'division' | 'workout' | 'athlete' | 'heats'
+  kind: 'add' | 'update' | 'link' | 'remove'
+  id: number | null
+  label: string
+  fields: { field: string; before: unknown; after: unknown }[]
+  warnings: string[]
+  requires: string[]
+  number?: number
+  needsScoreType?: true
+}
+
+export type CcPreview = {
+  event: { id: number; name: string }
+  changes: CcChange[]
+  version: string
+  request: CcRequest
+}
+
+export type CcSelection = { version: string; accepted: string[]; scoreTypes: Record<string, ScoreTypeValue> }
+
+export function useCcPreview(slug: string) {
+  return useMutation({
+    mutationFn: async ({ url, tz, mergePartB }: CcSource): Promise<CcPreview> => {
+      const id = parseEventUrl(url)
+      if (id == null) throw new Error('Paste a Competition Corner event link, like competitioncorner.net/events/12345.')
+      const request = { tz, mergePartB, event: await fetchCcEvent(id) }
+      const preview = await apiPost<Omit<CcPreview, 'request'>>('/api/import/competition-corner/preview', { slug, ...request })
+      return { ...preview, request }
+    },
+    // The section shows the error; an own onError keeps the global toast quiet.
+    onError: () => {},
+  })
+}
+
+export function useCcApply(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CcRequest & CcSelection) =>
+      apiPost<{ applied: number }>('/api/import/competition-corner/apply', { slug, ...input }),
+    // The section shows the error; an own onError keeps the global toast quiet.
+    onError: () => {},
+    onSuccess: () => {
+      for (const queryKey of [
+        queryKeys.divisions(slug), queryKeys.workouts(slug), queryKeys.workoutLocations(slug),
+        queryKeys.athletes(slug), queryKeys.schedule(slug), queryKeys.ops(slug),
+      ]) qc.invalidateQueries({ queryKey })
+    },
+  })
+}
+
+/** Apply answers 400 with `{ errors: string[] }` when the selection is incomplete. */
+export function applyErrors(e: unknown): string[] {
+  if (e instanceof HttpError && e.status === 400) {
+    try {
+      const body = JSON.parse(e.message) as { errors?: unknown }
+      if (Array.isArray(body.errors)) return body.errors.map(String)
+    } catch {
+      // Not the selection body; read it like any other error.
+    }
+  }
+  return [errorMessage(e)]
+}
